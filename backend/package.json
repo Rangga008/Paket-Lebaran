@@ -1,0 +1,27 @@
+{
+	"name": "backend",
+	"version": "1.0.0",
+	"description": "",
+	"main": "server.js",
+	"scripts": {
+		"seed": "node prisma/seed.js",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node server.js",
+		"migrate:fresh": "prisma migrate reset --force && npm run seed"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@prisma/client": "^6.7.0",
+		"bcrypt": "^6.0.0",
+		"cors": "^2.8.5",
+		"dotenv": "^16.5.0",
+		"express": "^5.1.0",
+		"jsonwebtoken": "^9.0.2",
+		"sqlite3": "^5.1.7"
+	},
+	"devDependencies": {
+		"prisma": "^6.7.0"
+	}
+}

@@ -1,0 +1,5 @@
+# Abaikan semua node_modules di mana pun berada
+**/node_modules/
+
+# Abaikan folder dummy yang ada di dalam folder frontend
+/frontend/dummy/

@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// schema.prisma
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique
+  name        String
+  password    String
+  phone       String?
+  role        Role     @default(CUSTOMER)
+  payment_method PaymentMethod?// Add this line
+  reseller_id Int?
+  reseller    User?    @relation("ResellerCustomers", fields: [reseller_id], references: [id])
+  customers   User[]   @relation("ResellerCustomers")
+  payments    Payment[]
+  package_id  Int?
+  package     Package? @relation(fields: [package_id], references: [id])
+  
+  // Add these relations for ResellerCustomer
+  resellerCustomers ResellerCustomer[] @relation("ResellerRelation")
+  customerResellers ResellerCustomer[] @relation("CustomerRelation")
+  
+  @@map("users")
+}
+
+model Package {
+  id              Int       @id @default(autoincrement())
+  name            String
+  description     String?
+  payment_method  PaymentMethod?
+  payment_amount  Float
+  users           User[]
+  products        Product[]  @relation("PackageProducts")
+  payments        Payment[]
+  
+  @@map("packages")
+}
+
+
+model Product {
+  id          Int       @id @default(autoincrement())
+  name        String
+  price       Float
+  description String?
+  packages    Package[] @relation("PackageProducts")
+  
+  @@map("products")
+}
+
+model Payment {
+  id                Int       @id @default(autoincrement())
+  payment_date      DateTime
+  amount            Float
+  status            PaymentStatus @default(PENDING)
+  payment_start_date DateTime?
+  payment_months    Int?
+  user_id           Int
+  user              User      @relation(fields: [user_id], references: [id])
+  package_id        Int
+  package           Package   @relation(fields: [package_id], references: [id])
+  
+  @@map("payments")
+}
+
+model ResellerCustomer {
+  id          Int   @id @default(autoincrement())
+  reseller_id Int
+  customer_id Int
+  reseller    User  @relation("ResellerRelation", fields: [reseller_id], references: [id])
+  customer    User  @relation("CustomerRelation", fields: [customer_id], references: [id])
+  
+  @@map("reseller_customers")
+}
+
+enum Role {
+  ADMIN
+  RESELLER
+  CUSTOMER
+}
+
+enum PaymentMethod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  CANCELED
+}
