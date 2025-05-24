@@ -78,25 +78,42 @@ function CustomerPanel() {
 		});
 	};
 
-	const handleConfirmPayment = () => {
+	const handleConfirmPayment = async () => {
 		if (selectedDates.length === 0) {
 			alert("Pilih setidaknya satu tanggal pembayaran");
 			return;
 		}
 
 		const paymentData = {
+			customerId: 1, // TODO: replace with actual logged-in customer ID
 			packageId: selectedPackage.id,
-			dates: selectedDates,
-			totalAmount: totalAmount,
+			amount: totalAmount,
+			paymentDate: new Date().toISOString(),
+			selectedDates: selectedDates,
 			paymentMethod: selectedPackage.payment_method,
 		};
 
-		console.log("Payment confirmed:", paymentData);
-		alert(
-			`Pembayaran dikonfirmasi untuk ${
-				selectedDates.length
-			} hari\nTotal: Rp ${totalAmount.toLocaleString("id-ID")}`
-		);
+		try {
+			const response = await axios.post(
+				"http://localhost:3001/api/payments",
+				paymentData
+			);
+			alert(response.data.message);
+			// Optionally reset selections or refresh data here
+		} catch (error) {
+			if (error.response && error.response.data) {
+				alert(
+					`Gagal konfirmasi pembayaran: ${error.response.data.error}\n` +
+						(error.response.data.duplicateDates
+							? `Tanggal duplikat: ${error.response.data.duplicateDates.join(
+									", "
+							  )}`
+							: "")
+				);
+			} else {
+				alert("Gagal konfirmasi pembayaran: " + error.message);
+			}
+		}
 	};
 
 	const renderCalendar = () => {

@@ -6,8 +6,14 @@ const prisma = new PrismaClient();
 module.exports = {
 	createPackage: async (req, res) => {
 		try {
-			const { name, description, payment_method, payment_amount, productIds } =
-				req.body;
+			const {
+				name,
+				description,
+				payment_method,
+				payment_amount,
+				payment_months,
+				productIds,
+			} = req.body;
 
 			if (!name || !payment_method || !productIds?.length) {
 				return res.status(400).json({ message: "Missing required fields" });
@@ -19,6 +25,7 @@ module.exports = {
 					description,
 					payment_method,
 					payment_amount: parseFloat(payment_amount),
+					payment_months,
 					products: {
 						connect: productIds.map((id) => ({ id })),
 					},
@@ -39,6 +46,42 @@ module.exports = {
 		const { amount, method } = req.body;
 		// Your payment logic here
 		res.status(200).json({ message: "Payment processed" });
+	},
+
+	updatePackage: async (req, res) => {
+		const { id } = req.params;
+		const {
+			name,
+			description,
+			payment_method,
+			payment_amount,
+			payment_months,
+			productIds,
+		} = req.body;
+
+		try {
+			const updatedPackage = await prisma.package.update({
+				where: { id: Number(id) },
+				data: {
+					name,
+					description,
+					payment_method,
+					payment_amount: parseFloat(payment_amount),
+					payment_months: parseInt(payment_months),
+					products: {
+						set: productIds.map((id) => ({ id: Number(id) })),
+					},
+				},
+				include: {
+					products: true,
+				},
+			});
+
+			res.status(200).json(updatedPackage);
+		} catch (error) {
+			console.error("Error updating package:", error);
+			res.status(500).json({ message: "Error updating package", error });
+		}
 	},
 
 	getPaymentStatus: (req, res) => {
@@ -106,8 +149,14 @@ module.exports = {
 	// Update a package
 	updatePackage: async (req, res) => {
 		const { id } = req.params;
-		const { name, description, payment_method, payment_amount, productIds } =
-			req.body;
+		const {
+			name,
+			description,
+			payment_method,
+			payment_amount,
+			payment_months,
+			productIds,
+		} = req.body;
 		try {
 			const updatedPackage = await packageModel.updatePackage(
 				id,
@@ -115,6 +164,7 @@ module.exports = {
 				description,
 				payment_method,
 				payment_amount,
+				payment_months,
 				productIds
 			);
 			res.status(200).json(updatedPackage);
@@ -123,14 +173,46 @@ module.exports = {
 		}
 	},
 
-	// Delete a package
+	// Delete package
+	// Delete package
 	deletePackage: async (req, res) => {
 		const { id } = req.params;
 		try {
-			await packageModel.deletePackage(id);
-			res.status(200).json({ message: `Package with id ${id} deleted` });
+			// First, disconnect all product relations
+			await prisma.package.update({
+				where: { id: Number(id) },
+				data: {
+					products: {
+						set: [], // This disconnects all related products
+					},
+				},
+			});
+
+			// Set package_id to null for users referencing this package
+			await prisma.user.updateMany({
+				where: { package_id: Number(id) },
+				data: { package_id: null },
+			});
+
+			// Delete payments referencing this package
+			await prisma.payment.deleteMany({
+				where: { package_id: Number(id) },
+			});
+
+			// Then delete the package
+			await prisma.package.delete({
+				where: { id: Number(id) },
+			});
+
+			res
+				.status(200)
+				.json({ message: `Package with id ${id} deleted successfully` });
 		} catch (error) {
-			res.status(500).json({ message: "Error deleting package", error });
+			console.error("Error deleting package:", error);
+			res.status(500).json({
+				message: "Error deleting package",
+				error: error.message,
+			});
 		}
 	},
 };

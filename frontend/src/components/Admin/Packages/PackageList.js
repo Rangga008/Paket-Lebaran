@@ -1,32 +1,48 @@
 import React, { useState, useEffect } from "react";
 import Modal from "../../common/Modal";
+import api from "../../../utils/api"; // Adjust the import based on your project structure
 
 const PackageList = ({
 	packages = [],
 	isLoading,
 	error,
 	onEdit,
+	onEditProduct,
 	onDelete,
 	onRefresh,
 }) => {
 	const [itemsPerPage, setItemsPerPage] = useState(10);
-	const [currentPage, setCurrentPage] = useState(1);
 	const [searchTerm, setSearchTerm] = useState("");
 
 	const [editPackage, setEditPackage] = useState(null);
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [deletePackageId, setDeletePackageId] = useState(null);
+	const [allProducts, setAllProducts] = useState([]);
+	const [showAddProductModal, setShowAddProductModal] = useState(false);
+	const [selectedProductToAdd, setSelectedProductToAdd] = useState(null);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [currentPage, setCurrentPage] = useState(1);
+	const productsPerPage = 12; // Adjust based on your grid size
 	const [formData, setFormData] = useState({
 		name: "",
 		description: "",
 		payment_method: "daily",
 		payment_amount: 0,
+		payment_months: 0,
 		productIds: [],
 	});
 	const [formLoading, setFormLoading] = useState(false);
 	const [formError, setFormError] = useState(null);
 	const [notification, setNotification] = useState(null);
+	// Add these new states at the top of your component
+	const [showProductEditModal, setShowProductEditModal] = useState(false);
+	const [currentProduct, setCurrentProduct] = useState(null);
+	const [productFormData, setProductFormData] = useState({
+		name: "",
+		price: 0,
+		description: "",
+	});
 
 	// Filter and pagination logic
 	const filteredPackages = packages.filter(
@@ -43,7 +59,17 @@ const PackageList = ({
 		indexOfLastItem
 	);
 
+	const fetchAllProducts = async () => {
+		try {
+			const response = await api.get("/products");
+			setAllProducts(response.data);
+		} catch (error) {
+			console.error("Error fetching products:", error);
+		}
+	};
+
 	useEffect(() => {
+		fetchAllProducts();
 		setCurrentPage(1);
 	}, [searchTerm, itemsPerPage]);
 
@@ -55,10 +81,87 @@ const PackageList = ({
 			description: pkg.description || "",
 			payment_method: pkg.payment_method?.toLowerCase() || "daily",
 			payment_amount: pkg.payment_amount || 0,
+			payment_months: pkg.payment_months || 0,
 			productIds: pkg.products ? pkg.products.map((p) => p.id) : [],
 		});
 		setFormError(null);
 		setShowEditModal(true);
+	};
+
+	// Filter products based on search query
+	const filteredProducts = allProducts.filter((product) =>
+		product.name.toLowerCase().includes(searchQuery.toLowerCase())
+	);
+
+	// Pagination logic
+
+	// Get current products
+	const currentProducts = filteredProducts
+		.filter((p) => !formData.productIds.includes(p.id))
+		.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage);
+
+	const handleAddProduct = (productId) => {
+		if (!formData.productIds.includes(productId)) {
+			setFormData((prev) => ({
+				...prev,
+				productIds: [...prev.productIds, productId],
+			}));
+		}
+		setSelectedProductToAdd(null);
+		setShowAddProductModal(false);
+	};
+
+	const handleRemoveProduct = (productId) => {
+		setFormData((prev) => ({
+			...prev,
+			productIds: prev.productIds.filter((id) => id !== productId),
+		}));
+	};
+
+	const openProductEditModal = (product) => {
+		setCurrentProduct(product);
+		setProductFormData({
+			name: product.name || "",
+			price: product.price || 0,
+			description: product.description || "",
+		});
+		setShowProductEditModal(true);
+	};
+
+	const closeProductEditModal = () => {
+		setShowProductEditModal(false);
+		setCurrentProduct(null);
+		setProductFormData({
+			name: "",
+			price: 0,
+			description: "",
+		});
+	};
+
+	const handleProductFormChange = (e) => {
+		const { name, value } = e.target;
+		setProductFormData((prev) => ({
+			...prev,
+			[name]: name === "price" ? parseFloat(value) || 0 : value,
+		}));
+	};
+
+	const handleProductFormSubmit = async (e) => {
+		e.preventDefault();
+		try {
+			// You'll need to implement this function in your parent component
+			await onEditProduct(currentProduct.id, productFormData);
+			setNotification({
+				type: "success",
+				message: "Product updated successfully",
+			});
+			closeProductEditModal();
+		} catch (err) {
+			setNotification({
+				type: "error",
+				message: err.message || "Failed to update product",
+			});
+		}
 	};
 
 	const closeEditModal = () => {
@@ -82,7 +185,10 @@ const PackageList = ({
 		const { name, value } = e.target;
 		setFormData((prev) => ({
 			...prev,
-			[name]: name === "payment_amount" ? parseFloat(value) || 0 : value,
+			[name]:
+				name === "payment_amount" || name === "payment_months"
+					? parseFloat(value) || 0
+					: value,
 		}));
 	};
 
@@ -131,8 +237,8 @@ const PackageList = ({
 	return (
 		<div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
 			{/* Header Section */}
-			<div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-				<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+			<div className="px-6 py-4 border-b border-gray-200 bg-white ">
+				<div className="grid-flow-row md:flex-row md:items-center md:justify-between gap-2">
 					<div>
 						<h2 className="text-xl font-semibold text-gray-800">
 							Package Management
@@ -142,7 +248,7 @@ const PackageList = ({
 						</p>
 					</div>
 
-					<div className="flex flex-col sm:flex-row gap-3">
+					<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
 						{/* Search Input */}
 						<div className="relative flex-1 min-w-[200px]">
 							<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -170,11 +276,11 @@ const PackageList = ({
 						</div>
 
 						{/* Items per page dropdown */}
-						<div className="relative">
+						<div className="relative min-w-[120px]">
 							<select
 								value={itemsPerPage}
 								onChange={(e) => setItemsPerPage(Number(e.target.value))}
-								className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pl-3 pr-8 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								className="appearance-none block w-full bg-white border border-gray-300 rounded-lg px-3 py-2 pl-3 pr-8 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							>
 								{[5, 10, 25, 50].map((num) => (
 									<option key={num} value={num}>
@@ -199,26 +305,51 @@ const PackageList = ({
 							</div>
 						</div>
 
-						{/* Refresh Button */}
+						{/* Refresh Button - Fixed Version */}
 						<button
 							onClick={onRefresh}
 							disabled={isLoading}
-							className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+							className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+								isLoading ? "opacity-50 cursor-not-allowed" : ""
+							}`}
 						>
-							<svg
-								className="h-4 w-4"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-								/>
-							</svg>
-							Refresh
+							{isLoading ? (
+								<svg
+									className="animate-spin h-4 w-4 text-gray-500"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+								>
+									<circle
+										className="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										strokeWidth="4"
+									></circle>
+									<path
+										className="opacity-75"
+										fill="currentColor"
+										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
+								</svg>
+							) : (
+								<svg
+									className="h-4 w-4"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+									/>
+								</svg>
+							)}
+							<span>Refresh</span>
 						</button>
 					</div>
 				</div>
@@ -447,12 +578,12 @@ const PackageList = ({
 											{/* Products Count */}
 											<div className="bg-purple-50 p-3 rounded-lg">
 												<h4 className="text-xs font-semibold text-purple-800 uppercase tracking-wider mb-1">
-													Products
+													Lama Pembayaran
 												</h4>
 												<p className="text-lg font-semibold text-gray-900">
-													{pkg.products?.length || 0}
+													{pkg.payment_months || 0}
 													<span className="text-sm font-normal text-gray-500 ml-1">
-														items
+														Bulan
 													</span>
 												</p>
 											</div>
@@ -496,7 +627,31 @@ const PackageList = ({
 															{pkg.products.map((product) => (
 																<tr key={product.id}>
 																	<td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-																		{product.name || "Unnamed Product"}
+																		<div className="flex items-center justify-between">
+																			{product.name || "Unnamed Product"}
+																			<button
+																				onClick={(e) => {
+																					e.stopPropagation();
+																					openProductEditModal(product);
+																				}}
+																				className="text-blue-600 hover:text-blue-800 ml-2"
+																				title="Edit product"
+																			>
+																				<svg
+																					className="h-4 w-4"
+																					fill="none"
+																					viewBox="0 0 24 24"
+																					stroke="currentColor"
+																				>
+																					<path
+																						strokeLinecap="round"
+																						strokeLinejoin="round"
+																						strokeWidth={2}
+																						d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+																					/>
+																				</svg>
+																			</button>
+																		</div>
 																	</td>
 																	<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">
 																		Rp{(product.price || 0).toLocaleString()}
@@ -610,6 +765,96 @@ const PackageList = ({
 			)}
 
 			{/* Edit Modal */}
+
+			{/* Product Edit Modal */}
+			<Modal
+				isOpen={showProductEditModal}
+				title="Edit Product"
+				onClose={closeProductEditModal}
+				className="max-w-lg overflow-y-auto"
+			>
+				<form onSubmit={handleProductFormSubmit} className="space-y-4 ">
+					<div className="overflow-y-auto">
+						<label className="block text-sm font-medium text-gray-700 mb-1">
+							Product Name
+						</label>
+						<input
+							type="text"
+							name="name"
+							value={productFormData.name}
+							onChange={handleProductFormChange}
+							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							placeholder="Product name"
+							required
+						/>
+					</div>
+
+					<div>
+						<label className="block text-sm font-medium text-gray-700 mb-1">
+							Price
+						</label>
+						<div className="relative">
+							<span className="absolute left-3 top-2">Rp</span>
+							<input
+								type="number"
+								name="price"
+								value={productFormData.price}
+								onChange={handleProductFormChange}
+								className="w-full pl-8 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								placeholder="0"
+								min="0"
+								step="any"
+								required
+							/>
+						</div>
+					</div>
+
+					<div>
+						<label className="block text-sm font-medium text-gray-700 mb-1">
+							Description
+						</label>
+						<textarea
+							name="description"
+							value={productFormData.description}
+							onChange={handleProductFormChange}
+							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							rows={3}
+							placeholder="Product description"
+						/>
+					</div>
+
+					<div className="flex justify-end space-x-2 pt-2">
+						<button
+							type="button"
+							onClick={closeProductEditModal}
+							className="px-4 py-2 rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 shadow-sm flex items-center gap-1"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								className="h-4 w-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M5 13l4 4L19 7"
+								/>
+							</svg>
+							<span>Save Product</span>
+						</button>
+					</div>
+				</form>
+			</Modal>
+
 			{/* Edit Package Modal */}
 			<Modal isOpen={showEditModal} title="Edit Paket" onClose={closeEditModal}>
 				<form onSubmit={handleFormSubmit} className="space-y-4">
@@ -662,23 +907,177 @@ const PackageList = ({
 
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">
-								Harga
+								Periode (Bulan)
 							</label>
-							<div className="relative">
-								<span className="absolute left-3 top-2">Rp</span>
-								<input
-									type="number"
-									name="payment_amount"
-									value={formData.payment_amount}
-									onChange={handleFormChange}
-									className="w-full pl-8 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-									placeholder="0"
-									min="0"
-									step="any"
-									required
-								/>
-							</div>
+							<input
+								type="number"
+								name="payment_months"
+								value={formData.payment_months}
+								onChange={handleFormChange}
+								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								placeholder="0"
+								min="0"
+								step="1"
+								required
+							/>
 						</div>
+					</div>
+
+					<div>
+						<label className="block text-sm font-medium text-gray-700 mb-1">
+							Harga
+						</label>
+						<div className="relative">
+							<span className="absolute left-3 top-2">Rp</span>
+							<input
+								type="number"
+								name="payment_amount"
+								value={formData.payment_amount}
+								onChange={handleFormChange}
+								className="w-full pl-8 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								placeholder="0"
+								min="0"
+								step="any"
+								required
+							/>
+						</div>
+					</div>
+
+					{/* Product Management Section */}
+					<div className="mt-4">
+						<div className="flex justify-between items-center mb-2">
+							<h3 className="text-sm font-medium text-gray-700">
+								Products in Package ({formData.productIds.length})
+							</h3>
+							<button
+								type="button"
+								onClick={() => setShowAddProductModal(true)}
+								className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+							>
+								<svg
+									className="-ml-0.5 mr-1 h-3 w-3"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+									/>
+								</svg>
+								Add Product
+							</button>
+						</div>
+
+						{formData.productIds.length > 0 ? (
+							<div className="max-h-64 overflow-y-auto pr-2">
+								<div className="space-y-2">
+									{formData.productIds.map((productId) => {
+										const product = allProducts.find((p) => p.id === productId);
+										if (!product) return null;
+
+										return (
+											<div
+												key={productId}
+												className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-sm transition-shadow"
+											>
+												<div className="flex items-center space-x-3 flex-1 min-w-0">
+													<div className="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
+														<svg
+															className="h-5 w-5 text-gray-500"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke="currentColor"
+														>
+															<path
+																strokeLinecap="round"
+																strokeLinejoin="round"
+																strokeWidth={2}
+																d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+															/>
+														</svg>
+													</div>
+													<div className="min-w-0 flex-1">
+														<p className="text-sm font-medium text-gray-900 truncate">
+															{product.name}
+														</p>
+														<p className="text-xs text-gray-500">
+															Rp{product.price.toLocaleString()}
+														</p>
+													</div>
+												</div>
+												<div className="flex space-x-2 flex-shrink-0">
+													<button
+														type="button"
+														onClick={() => openProductEditModal(product)}
+														className="text-blue-500 hover:text-blue-700"
+														title="Edit product"
+													>
+														<svg
+															className="h-4 w-4"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke="currentColor"
+														>
+															<path
+																strokeLinecap="round"
+																strokeLinejoin="round"
+																strokeWidth={2}
+																d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+															/>
+														</svg>
+													</button>
+													<button
+														type="button"
+														onClick={() => handleRemoveProduct(productId)}
+														className="text-red-500 hover:text-red-700"
+														title="Remove product"
+													>
+														<svg
+															className="h-4 w-4"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke="currentColor"
+														>
+															<path
+																strokeLinecap="round"
+																strokeLinejoin="round"
+																strokeWidth={2}
+																d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+															/>
+														</svg>
+													</button>
+												</div>
+											</div>
+										);
+									})}
+								</div>
+							</div>
+						) : (
+							<div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+								<svg
+									className="mx-auto h-12 w-12 text-gray-400"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+									/>
+								</svg>
+								<h3 className="mt-2 text-sm font-medium text-gray-900">
+									No products added
+								</h3>
+								<p className="mt-1 text-sm text-gray-500">
+									Click "Add Product" to include items in this package
+								</p>
+							</div>
+						)}
 					</div>
 
 					{formError && (
@@ -741,6 +1140,193 @@ const PackageList = ({
 						</button>
 					</div>
 				</form>
+
+				{/* Add Product Modal */}
+				<Modal
+					isOpen={showAddProductModal}
+					title="Add Product to Package"
+					onClose={() => {
+						setShowAddProductModal(false);
+						setSearchQuery("");
+						setCurrentPage(1);
+					}}
+					size="xl"
+				>
+					<div className="space-y-4">
+						{/* Search Input */}
+						<div className="relative">
+							<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+								<svg
+									className="h-5 w-5 text-gray-400"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+									/>
+								</svg>
+							</div>
+							<input
+								type="text"
+								placeholder="Search products..."
+								className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+								value={searchQuery}
+								onChange={(e) => {
+									setSearchQuery(e.target.value);
+									setCurrentPage(1);
+								}}
+							/>
+						</div>
+
+						{/* Product Grid */}
+						<div className="border border-gray-200 rounded-xl">
+							<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 max-h-96 overflow-y-auto">
+								{currentProducts.map((product) => (
+									<div
+										key={product.id}
+										onClick={() => setSelectedProductToAdd(product.id)}
+										className={`p-3 border rounded-lg cursor-pointer transition ${
+											selectedProductToAdd === product.id
+												? "bg-blue-50 border-blue-300"
+												: "bg-white hover:bg-gray-50"
+										}`}
+									>
+										<div className="flex flex-col items-center text-center">
+											<div className="w-10 h-10 bg-gray-200 rounded-full mb-2 flex items-center justify-center">
+												<svg
+													className="h-6 w-6 text-gray-500"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke="currentColor"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+													/>
+												</svg>
+											</div>
+											<h4 className="font-medium text-sm truncate w-full">
+												{product.name}
+											</h4>
+											<p className="text-xs text-gray-600 mt-1">
+												Rp{product.price.toLocaleString()}
+											</p>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+
+						{/* Pagination Controls */}
+						{totalPages > 1 && (
+							<div className="flex justify-center items-center space-x-2">
+								<button
+									onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+									disabled={currentPage === 1}
+									className="p-1 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<svg
+										className="h-5 w-5 text-gray-600"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M15 19l-7-7 7-7"
+										/>
+									</svg>
+								</button>
+
+								{Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
+									let pageNum;
+									if (totalPages <= 5) {
+										pageNum = i + 1;
+									} else if (currentPage <= 3) {
+										pageNum = i + 1;
+									} else if (currentPage >= totalPages - 2) {
+										pageNum = totalPages - 4 + i;
+									} else {
+										pageNum = currentPage - 2 + i;
+									}
+
+									return (
+										<button
+											key={pageNum}
+											onClick={() => setCurrentPage(pageNum)}
+											className={`w-8 h-8 rounded-full text-sm ${
+												currentPage === pageNum
+													? "bg-blue-600 text-white"
+													: "text-gray-700 hover:bg-gray-100"
+											}`}
+										>
+											{pageNum}
+										</button>
+									);
+								})}
+
+								<button
+									onClick={() =>
+										setCurrentPage((p) => Math.min(p + 1, totalPages))
+									}
+									disabled={currentPage === totalPages}
+									className="p-1 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<svg
+										className="h-5 w-5 text-gray-600"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9 5l7 7-7 7"
+										/>
+									</svg>
+								</button>
+							</div>
+						)}
+
+						{/* Action Buttons */}
+						<div className="flex justify-end space-x-2 pt-2 border-t border-gray-200">
+							<button
+								type="button"
+								onClick={() => {
+									setShowAddProductModal(false);
+									setSearchQuery("");
+									setCurrentPage(1);
+								}}
+								className="px-4 py-2 rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									if (selectedProductToAdd) {
+										handleAddProduct(selectedProductToAdd);
+										setSearchQuery("");
+										setCurrentPage(1);
+									}
+								}}
+								disabled={!selectedProductToAdd}
+								className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 shadow-sm"
+							>
+								Add Product
+							</button>
+						</div>
+					</div>
+				</Modal>
 			</Modal>
 
 			{/* Delete Confirmation Modal */}

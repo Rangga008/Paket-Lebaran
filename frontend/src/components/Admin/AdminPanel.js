@@ -12,7 +12,8 @@ import PackageList from "./Packages/PackageList";
 import CustomerTable from "./Customers/CustomerTable";
 import ResellerTable from "./Resellers/ResellerTable";
 import PaymentConfirmation from "./Payments/PaymentConfirmation";
-import PaymentConfirmationModal from "../Admin/CustomerPaymentTable";
+import PaymentConfirmationModal from "../common/PaymentConfirmationModal";
+
 import api from "../../utils/api";
 
 function AdminPanel() {
@@ -62,6 +63,7 @@ function AdminPanel() {
 		description: "",
 		payment_method: "daily",
 		payment_amount: 0,
+		payment_months: 0,
 		productIds: [],
 	});
 
@@ -336,6 +338,7 @@ function AdminPanel() {
 				description: newPackage.description,
 				payment_method: newPackage.payment_method.toUpperCase(),
 				payment_amount: parseFloat(newPackage.payment_amount),
+				payment_months: parseInt(newPackage.payment_months), // Ensure it's a number
 				productIds: newPackage.productIds,
 			});
 
@@ -348,6 +351,7 @@ function AdminPanel() {
 				description: "",
 				payment_method: "daily",
 				payment_amount: 0,
+				payment_months: 0,
 				productIds: [],
 			});
 
@@ -390,7 +394,7 @@ function AdminPanel() {
 		setIsLoading(true);
 		setError(null);
 		try {
-			const response = await api.put(`/resellers/${id}`, updateData);
+			const response = await api.put(`/users/resellers/${id}`, updateData);
 			setResellers((prev) =>
 				prev.map((r) => (r.id === id ? response.data : r))
 			);
@@ -402,11 +406,24 @@ function AdminPanel() {
 		}
 	};
 
+	const handleEditPackage = async (packageData) => {
+		try {
+			const response = await api.put(`/packages/${packageData.id}`, {
+				...packageData,
+				productIds: packageData.productIds,
+			});
+			await fetchPackages();
+			return response.data;
+		} catch (error) {
+			throw error;
+		}
+	};
+
 	const deleteReseller = async (id) => {
 		setIsLoading(true);
 		setError(null);
 		try {
-			await api.delete(`/resellers/${id}`);
+			await api.delete(`/users/resellers/${id}`);
 			setResellers((prev) => prev.filter((r) => r.id !== id));
 		} catch (err) {
 			console.error("Failed to delete reseller", err);
@@ -426,6 +443,7 @@ function AdminPanel() {
 				description: pkg.description,
 				payment_method: pkg.payment_method.toUpperCase(),
 				payment_amount: parseFloat(pkg.payment_amount),
+				payment_months: pkg.payment_months,
 				productIds: pkg.productIds,
 			});
 			await fetchPackages();
@@ -438,6 +456,39 @@ function AdminPanel() {
 		}
 	};
 
+	const handleEditProduct = async (productId, productData) => {
+		try {
+			const response = await api.put(`/products/${productId}`, productData);
+			// Refresh your packages to show the updated product
+			await fetchPackages();
+			return response.data;
+		} catch (error) {
+			throw error;
+		}
+	};
+
+	const handleDeleteConfirm = async () => {
+		if (!deletePackageId) return;
+
+		try {
+			await onDelete(deletePackageId);
+			setNotification({
+				type: "success",
+				message: "Package deleted successfully",
+			});
+			closeDeleteModal();
+			await onRefresh(); // Refresh the package list
+		} catch (err) {
+			console.error("Delete error:", err.response?.data || err.message);
+			setNotification({
+				type: "error",
+				message:
+					err.response?.data?.message ||
+					"Failed to delete package. Please try again.",
+			});
+		}
+	};
+
 	// Handle package delete
 	const handlePackageDelete = async (packageId) => {
 		setIsLoading(true);
@@ -446,8 +497,11 @@ function AdminPanel() {
 			await api.delete(`/packages/${packageId}`);
 			await fetchPackages();
 		} catch (err) {
-			console.error("Failed to delete package", err);
-			setError("Failed to delete package: " + err.message);
+			console.error("Delete error details:", err.response?.data || err.message);
+			setError(
+				err.response?.data?.message ||
+					"Failed to delete package. It may still contain products."
+			);
 		} finally {
 			setIsLoading(false);
 		}
@@ -469,7 +523,7 @@ function AdminPanel() {
 				amount: selectedPackage.payment_amount,
 				status: "confirmed",
 				payment_start_date: paymentStartDate.toISOString(),
-				payment_months: paymentMonths,
+				payment_months: paymentmonths,
 			}));
 
 			await api.post("/payments/bulk", { payments });
@@ -482,29 +536,6 @@ function AdminPanel() {
 		} finally {
 			setIsLoading(false);
 		}
-	};
-
-	const handlePaymentSubmit = (customerId, amount, date) => {
-		// Update customer's paid amount and payment history
-		setCustomers((prevCustomers) =>
-			prevCustomers.map((customer) => {
-				if (customer.id === customerId) {
-					const formattedDate = format(date, "yyyy-MM-dd");
-					return {
-						...customer,
-						paid_amount: customer.paid_amount + amount,
-						payment_history: [
-							...customer.payment_history,
-							{ date: formattedDate, amount },
-						],
-						paid_dates: [...customer.paid_dates, formattedDate],
-					};
-				}
-				return customer;
-			})
-		);
-
-		setPaymentModalOpen(false);
 	};
 
 	const handleProductSelect = (product) => {
@@ -615,6 +646,45 @@ function AdminPanel() {
 		});
 	};
 
+	// Payment handlers
+	const handlePaymentSubmit = async (paymentData) => {
+		try {
+			// 1. Send payment data to backend
+			const response = await api.post("/payments", paymentData);
+
+			// 2. Update local state
+			setCustomers((prevCustomers) =>
+				prevCustomers.map((c) => {
+					if (c.id === paymentData.customerId) {
+						return {
+							...c,
+							paid_amount: (c.paid_amount || 0) + paymentData.amount,
+							paid_dates: [
+								...(c.paid_dates || []),
+								...paymentData.selectedDates,
+							],
+							payment_history: [
+								...(c.payment_history || []),
+								{
+									date: format(new Date(paymentData.paymentDate)),
+									amount: paymentData.amount,
+									dates: paymentData.selectedDates,
+								},
+							],
+						};
+					}
+					return c;
+				})
+			);
+
+			// 3. Show success notification
+			toast.success("Payment confirmed successfully");
+		} catch (error) {
+			console.error("Payment failed:", error);
+			toast.error(`Payment failed: ${error.message}`);
+		}
+	};
+
 	// Calculate total price for package preview
 	const calculatePackageTotal = () => {
 		return newPackage.productIds.reduce((total, productId) => {
@@ -648,7 +718,7 @@ function AdminPanel() {
 				);
 			case "packages":
 				return (
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+					<div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
 						<PackageForm
 							newPackage={newPackage}
 							products={products}
@@ -665,6 +735,8 @@ function AdminPanel() {
 							error={error}
 							onRefresh={fetchPackages}
 							onEdit={handlePackageEdit} // <-- Pass the edit handler
+							onEditProduct={handleEditProduct}
+							onEditPackage={handleEditPackage}
 							onDelete={handlePackageDelete} // <-- Pass the delete handler
 						/>
 					</div>
@@ -724,6 +796,8 @@ function AdminPanel() {
 						onConfirm={handleConfirmPayment}
 						isLoading={isLoading}
 						error={error}
+						onClose={() => setShowPaymentModal(false)}
+						onSubmit={handlePaymentSubmit}
 					/>
 				);
 			default:

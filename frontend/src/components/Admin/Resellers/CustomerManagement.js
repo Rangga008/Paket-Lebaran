@@ -200,6 +200,10 @@ function CustomerManagement() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [notification, setNotification] = useState(null);
+	const [showUnassignModal, setShowUnassignModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [selectedCustomerForAction, setSelectedCustomerForAction] =
+		useState(null);
 
 	// Modal states
 	const [showCreateModal, setShowCreateModal] = useState(false);
@@ -222,7 +226,9 @@ function CustomerManagement() {
 		phone: "",
 		package_id: null,
 		payment_method: null,
+		package_start_date: "", // new field for package start date
 	});
+	const [assignPackageStartDate, setAssignPackageStartDate] = useState("");
 	const [newPassword, setNewPassword] = useState("");
 
 	// Fetch reseller data
@@ -352,6 +358,9 @@ function CustomerManagement() {
 			phone: customer.phone || "",
 			package_id: customer.package_id || null,
 			payment_method: customer.payment_method || null,
+			package_start_date: customer.package_start_date
+				? new Date(customer.package_start_date).toISOString().split("T")[0]
+				: "",
 		});
 		setShowEditModal(true);
 	};
@@ -367,7 +376,20 @@ function CustomerManagement() {
 		setShowAssignCustomerModal(true);
 	};
 
+	const openUnassignModal = (customer) => {
+		setSelectedCustomerForAction(customer);
+		setShowUnassignModal(true);
+	};
+
+	const openDeleteModal = (customer) => {
+		setSelectedCustomerForAction(customer);
+		setShowDeleteModal(true);
+	};
+
 	const closeModals = () => {
+		setShowUnassignModal(false);
+		setShowDeleteModal(false);
+		setSelectedCustomerForAction(null);
 		setShowCreateModal(false);
 		setShowEditModal(false);
 		setShowResetPasswordModal(false);
@@ -394,6 +416,15 @@ function CustomerManagement() {
 		}));
 	};
 
+	// New handler for date input change
+	const handleDateChange = (e) => {
+		const { name, value } = e.target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: value,
+		}));
+	};
+
 	// API operations
 	const createCustomer = async () => {
 		if (!formData.username || !formData.password) {
@@ -407,10 +438,12 @@ function CustomerManagement() {
 				...formData,
 				role: "CUSTOMER",
 				reseller_id: parseInt(resellerId),
+				package_start_date: formData.package_start_date || null,
 			});
 			showNotification("Customer created successfully", "success");
 			closeModals();
-			fetchCustomers();
+			await fetchCustomers(); // Auto-refresh
+			await fetchAllCustomers(); // Refresh the unassigned list too
 		} catch (err) {
 			showNotification(
 				"Failed to create customer: " +
@@ -432,10 +465,12 @@ function CustomerManagement() {
 				phone: formData.phone,
 				package_id: formData.package_id,
 				payment_method: formData.payment_method,
+				package_start_date: formData.package_start_date || null,
 			});
 			showNotification("Customer updated successfully", "success");
 			closeModals();
 			fetchCustomers();
+			await fetchCustomers(); // Auto-refresh
 		} catch (err) {
 			showNotification(
 				"Failed to update customer: " +
@@ -448,19 +483,57 @@ function CustomerManagement() {
 	};
 
 	const deleteCustomer = async (customerId) => {
-		if (!window.confirm("Are you sure you want to delete this customer?"))
-			return;
 		setIsLoading(true);
 		try {
 			await api.delete(`/users/customers/${customerId}`);
-			showNotification("Customer deleted successfully", "success");
-			fetchCustomers();
-		} catch (err) {
-			showNotification(
-				"Failed to delete customer: " +
-					(err.response?.data?.message || err.message),
-				"error"
-			);
+			setNotification({
+				message: "Customer deleted successfully!",
+				type: "success",
+			});
+			closeModals();
+			fetchCustomers(); // Refresh the customer list
+		} catch (error) {
+			console.error("Delete Error:", error);
+			setNotification({
+				message:
+					"Failed to delete customer: " +
+					(error.response?.data?.message || error.message),
+				type: "error",
+			});
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const unassignCustomer = async (customerId) => {
+		setIsLoading(true);
+		try {
+			const response = await api.put(`/users/${customerId}/unassign`);
+
+			setNotification({
+				message: response.data?.message || "Customer unassigned successfully!",
+				type: "success",
+			});
+
+			closeModals();
+			await fetchCustomers(); // Refresh the customer list
+			await fetchAllCustomers(); // Refresh the unassigned customers list
+		} catch (error) {
+			console.error("Unassign Error:", error);
+
+			let errorMessage = "Failed to unassign customer";
+			if (error.response) {
+				errorMessage += `: ${
+					error.response.data?.message || error.response.statusText
+				}`;
+			} else {
+				errorMessage += `: ${error.message}`;
+			}
+
+			setNotification({
+				message: errorMessage,
+				type: "error",
+			});
 		} finally {
 			setIsLoading(false);
 		}
@@ -514,10 +587,11 @@ function CustomerManagement() {
 
 		setIsLoading(true);
 		try {
-			await api.put(`/users/${selectedCustomerToAssign}/reseller`, {
+			await api.put(`/users/${selectedCustomerToAssign}/resellers`, {
 				reseller_id: resellerId, // id reseller yang login/aktif
 				package_id: selectedPackage,
 				payment_method: selectedPaymentMethod,
+				package_start_date: assignPackageStartDate || null,
 			});
 
 			setNotification({
@@ -525,6 +599,8 @@ function CustomerManagement() {
 				type: "success",
 			});
 			closeModals();
+			await fetchCustomers(); // Refresh assigned customers
+			await fetchAllCustomers(); // Refresh unassigned customers
 			// Optionally refresh data here
 		} catch (error) {
 			console.error("Assign Error:", error);
@@ -580,6 +656,31 @@ function CustomerManagement() {
 				>
 					<Icons.ArrowLeft />
 					Back to Resellers
+				</Button>
+				<Button
+					onClick={fetchCustomers}
+					variant="secondary"
+					className="flex items-center gap-2"
+					disabled={isLoading}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						className={`${isLoading ? "animate-spin" : ""}`}
+					>
+						<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+						<path d="M3 3v5h5" />
+						<path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+						<path d="M16 16h5v5" />
+					</svg>
+					Refresh Data
 				</Button>
 			</div>
 
@@ -670,7 +771,13 @@ function CustomerManagement() {
 												<Icons.Key />
 											</button>
 											<button
-												onClick={() => deleteCustomer(customer.id)}
+												onClick={() => openUnassignModal(customer)}
+												className="text-green-600 hover:text-green-100 flex items-center gap-1"
+											>
+												<Icons.Key />
+											</button>
+											<button
+												onClick={() => openDeleteModal(customer)}
 												className="text-red-600 hover:text-red-900 flex items-center gap-1"
 												title="Delete"
 											>
@@ -795,6 +902,18 @@ function CustomerManagement() {
 							</div>
 						</div>
 					</div>
+					<div className="mt-4">
+						<label className="block text-sm font-medium text-gray-700 mb-1">
+							Package Start Date
+						</label>
+						<input
+							type="date"
+							name="package_start_date"
+							value={formData.package_start_date}
+							onChange={handleDateChange}
+							className="w-full border border-gray-300 rounded-md p-2"
+						/>
+					</div>
 				</div>
 				<div className="mt-6 flex justify-end gap-3">
 					<Button variant="secondary" onClick={closeModals}>
@@ -802,6 +921,78 @@ function CustomerManagement() {
 					</Button>
 					<Button onClick={createCustomer} disabled={isLoading}>
 						Create Customer
+					</Button>
+				</div>
+			</Modal>
+
+			{/* Delete Confirmation Modal */}
+			<Modal
+				isOpen={showDeleteModal}
+				onClose={closeModals}
+				title="Confirm Deletion"
+			>
+				<div className="space-y-4">
+					<p className="text-gray-700">
+						Are you sure you want to delete customer{" "}
+						<span className="font-semibold">
+							{selectedCustomerForAction?.name || "this customer"}?
+						</span>
+					</p>
+					<p className="text-sm text-red-600">
+						Warning: This action cannot be undone. All customer data will be
+						permanently removed.
+					</p>
+				</div>
+				<div className="mt-6 flex justify-end gap-3">
+					<Button variant="secondary" onClick={closeModals}>
+						Cancel
+					</Button>
+					<Button
+						variant="danger"
+						onClick={() => {
+							if (selectedCustomerForAction) {
+								deleteCustomer(selectedCustomerForAction.id);
+							}
+						}}
+						disabled={isLoading}
+					>
+						{isLoading ? "Deleting..." : "Delete Permanently"}
+					</Button>
+				</div>
+			</Modal>
+
+			{/* Unassign Confirmation Modal */}
+			<Modal
+				isOpen={showUnassignModal}
+				onClose={closeModals}
+				title="Confirm Unassign"
+			>
+				<div className="space-y-4">
+					<p className="text-gray-700">
+						Are you sure you want to unassign customer{" "}
+						<span className="font-semibold">
+							{selectedCustomerForAction?.name || "this customer"}?
+						</span>
+					</p>
+					<p className="text-sm text-yellow-600">
+						Note: The customer will be removed from this reseller but their
+						account will remain active.
+					</p>
+				</div>
+				<div className="mt-6 flex justify-end gap-3">
+					<Button variant="secondary" onClick={closeModals}>
+						Cancel
+					</Button>
+					<Button
+						variant="warning"
+						onClick={() => {
+							if (selectedCustomerForAction) {
+								unassignCustomer(selectedCustomerForAction.id);
+							}
+						}}
+						disabled={isLoading}
+					>
+						{isLoading ? "Processing..." : "Confirm Unassign"}
 					</Button>
 				</div>
 			</Modal>
@@ -890,6 +1081,18 @@ function CustomerManagement() {
 								{!formData.payment_method && "Pilih paket dulu ya~"}
 							</div>
 						</div>
+					</div>
+					<div className="mt-4">
+						<label className="block text-sm font-medium text-gray-700 mb-1">
+							Package Start Date
+						</label>
+						<input
+							type="date"
+							name="package_start_date"
+							value={formData.package_start_date}
+							onChange={handleDateChange}
+							className="w-full border border-gray-300 rounded-md p-2"
+						/>
 					</div>
 				</div>
 				<div className="mt-6 flex justify-end gap-3">
@@ -987,6 +1190,18 @@ function CustomerManagement() {
 							{paymentMethod === "MONTHLY" && "Bulanan"}
 							{!paymentMethod && "Pilih paket dulu ya~"}
 						</div>
+					</div>
+					<div className="mt-4">
+						<label className="block text-sm font-medium text-gray-700 mb-1">
+							Package Start Date
+						</label>
+						<input
+							type="date"
+							name="package_start_date"
+							value={assignPackageStartDate}
+							onChange={(e) => setAssignPackageStartDate(e.target.value)}
+							className="w-full border border-gray-300 rounded-md p-2"
+						/>
 					</div>
 				</div>
 				<div className="mt-6 flex justify-end gap-3">

@@ -1,18 +1,27 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, {
+	createContext,
+	useState,
+	useContext,
+	Suspense,
+	lazy,
+} from "react";
 import {
 	BrowserRouter as Router,
 	Routes,
 	Route,
 	Navigate,
 } from "react-router-dom";
-import Login from "./auth/Login";
-import Register from "./auth/Register";
 import Navbar from "./components/layouts/Navbar";
 import CustomerManagement from "./components/Admin/Resellers/CustomerManagement";
 
 import "./App.css";
 
-const cors = require("cors");
+// Lazy load components for better performance
+const Login = lazy(() => import("./auth/Login"));
+const Register = lazy(() => import("./auth/Register"));
+const AdminPanel = lazy(() => import("./components/Admin/AdminPanel"));
+const ResellerPanel = lazy(() => import("./components/reseller/ResellerPanel"));
+const CustomerPanel = lazy(() => import("./components/customer/CustomerPanel"));
 
 const AuthContext = createContext(null);
 
@@ -23,19 +32,13 @@ function useAuth() {
 function RequireAuth({ children, allowedRoles }) {
 	const auth = useAuth();
 	if (!auth.user) {
-		// Not logged in
 		return <Navigate to="/login" replace />;
 	}
 	if (!allowedRoles.includes(auth.user.role)) {
-		// Role not allowed
 		return <Navigate to="/login" replace />;
 	}
 	return children;
 }
-
-import AdminPanel from "./components/Admin/AdminPanel";
-import ResellerPanel from "./components/reseller/ResellerPanel";
-import CustomerPanel from "./components/customer/CustomerPanel";
 
 function AdminPage() {
 	return <AdminPanel />;
@@ -51,9 +54,14 @@ function CustomerPage() {
 
 function App() {
 	const [user, setUser] = useState(() => {
-		// Initialize user from localStorage if available
-		const storedUser = localStorage.getItem("user");
-		return storedUser ? JSON.parse(storedUser) : null;
+		try {
+			const storedUser = localStorage.getItem("user");
+			return storedUser ? JSON.parse(storedUser) : null;
+		} catch (error) {
+			console.error("Error parsing stored user data:", error);
+			localStorage.removeItem("user");
+			return null;
+		}
 	});
 
 	const login = (userData) => {
@@ -72,74 +80,84 @@ function App() {
 		logout,
 	};
 
-	const createProduct = async () => {
-		try {
-			const res = await fetch("http://localhost:3001/api/products", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(newProduct),
-			});
-
-			if (!res.ok) {
-				throw new Error("Gagal membuat produk");
-			}
-
-			const result = await res.json();
-			console.log("Produk berhasil dibuat:", result);
-			// Reset form atau update state produk di sini
-			setNewProduct({ name: "", price: "", description: "" });
-		} catch (err) {
-			console.error("Error saat membuat produk:", err);
-		}
-	};
-
 	return (
 		<AuthContext.Provider value={authContextValue}>
 			<Router>
-				<Navbar />
-				<Routes>
-					<Route
-						path="/login"
-						element={
-							user ? <Navigate to={`/${user.role}`} replace /> : <Login />
-						}
-					/>
-					<Route
-						path="/register"
-						element={
-							user ? <Navigate to={`/${user.role}`} replace /> : <Register />
-						}
-					/>
-					<Route
-						path="/admin"
-						element={
-							<RequireAuth allowedRoles={["ADMIN"]}>
-								<AdminPage />
-							</RequireAuth>
-						}
-					/>
-					<Route
-						path="/reseller"
-						element={
-							<RequireAuth allowedRoles={["RESELLER"]}>
-								<ResellerPage />
-							</RequireAuth>
-						}
-					/>
-					<Route
-						path="/customer"
-						element={
-							<RequireAuth allowedRoles={["CUSTOMER"]}>
-								<CustomerPage />
-							</RequireAuth>
-						}
-					/>
-					<Route path="*" element={<Navigate to="/login" replace />} />
-					<Route path="/admin/resellers/:resellerId/customers" element={<CustomerManagement />} />
-
-				</Routes>
+				<div className="max-h-screen flex flex-col">
+					<Navbar />
+					<main className="flex-grow bg-gray-50">
+						<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+							<Suspense
+								fallback={
+									<div className="flex justify-center items-center h-64">
+										<div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+									</div>
+								}
+							>
+								<Routes>
+									<Route
+										path="/login"
+										element={
+											user ? (
+												<Navigate to={`/${user.role.toLowerCase()}`} replace />
+											) : (
+												<div className="flex justify-center items-center min-h-[calc(100vh-64px)]">
+													<Login />
+												</div>
+											)
+										}
+									/>
+									<Route
+										path="/register"
+										element={
+											user ? (
+												<Navigate to={`/${user.role.toLowerCase()}`} replace />
+											) : (
+												<div className="flex justify-center items-center min-h-[calc(100vh-64px)]">
+													<Register />
+												</div>
+											)
+										}
+									/>
+									<Route
+										path="/admin"
+										element={
+											<RequireAuth allowedRoles={["ADMIN"]}>
+												<AdminPage />
+											</RequireAuth>
+										}
+									/>
+									<Route
+										path="/admin/resellers/:resellerId/customers"
+										element={
+											<RequireAuth allowedRoles={["ADMIN"]}>
+												<CustomerManagement />
+											</RequireAuth>
+										}
+									/>
+									<Route
+										path="/reseller"
+										element={
+											<RequireAuth allowedRoles={["RESELLER"]}>
+												<ResellerPage />
+											</RequireAuth>
+										}
+									/>
+									<Route
+										path="/customer"
+										element={
+											<RequireAuth allowedRoles={["CUSTOMER"]}>
+												<CustomerPage />
+											</RequireAuth>
+										}
+									/>
+									<Route path="/" element={<Navigate to="/login" replace />} />
+									<Route path="*" element={<Navigate to="/login" replace />} />
+								</Routes>
+							</Suspense>
+						</div>
+					</main>
+				</div>
 			</Router>
 		</AuthContext.Provider>
 	);

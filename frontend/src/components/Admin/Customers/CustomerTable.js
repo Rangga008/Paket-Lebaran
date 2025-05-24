@@ -356,6 +356,7 @@ const CustomerTable = ({
 		phone: "",
 		role: "customer",
 		package_id: null,
+		package_start_date: "", // new field for package start date
 	});
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [showEditModal, setShowEditModal] = useState(false);
@@ -386,6 +387,12 @@ const CustomerTable = ({
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
 		setNewCustomerData((prev) => ({ ...prev, [name]: value }));
+	};
+
+	// New handler for date input change
+	const handleDateChange = (e) => {
+		const { name, value } = e.target;
+		setNewCustomerData((prev) => ({ ...prev, [name]: value }));
 
 		// Clear specific error when field is changed
 		if (errors[name]) {
@@ -406,6 +413,15 @@ const CustomerTable = ({
 		setShowCreateModal(true);
 	};
 
+	const formatDateForInput = (dateString) => {
+		if (!dateString) return "";
+		const date = new Date(dateString);
+		const year = date.getFullYear();
+		const month = (date.getMonth() + 1).toString().padStart(2, "0");
+		const day = date.getDate().toString().padStart(2, "0");
+		return `${year}-${month}-${day}`;
+	};
+
 	const openEditModal = (customer) => {
 		if (customer.id === currentUser?.id) return;
 		setEditingCustomer(customer);
@@ -416,6 +432,7 @@ const CustomerTable = ({
 			password: "",
 			role: customer.role || "customer",
 			package_id: customer.package_id || null,
+			package_start_date: formatDateForInput(customer.package_start_date),
 		});
 		setErrors({});
 		setShowEditModal(true);
@@ -457,6 +474,7 @@ const CustomerTable = ({
 				phone: newCustomerData.phone || null,
 				role: "CUSTOMER",
 				package_id: newCustomerData.package_id || null,
+				package_start_date: newCustomerData.package_start_date || null,
 			};
 
 			await api.post("/users/customers", payload);
@@ -488,7 +506,12 @@ const CustomerTable = ({
 				return;
 			}
 
-			await api.put(`/users/customers/${editingCustomer.id}`, newCustomerData);
+			const payload = {
+				...newCustomerData,
+				package_start_date: newCustomerData.package_start_date || null,
+			};
+
+			await api.put(`/users/customers/${editingCustomer.id}`, payload);
 
 			setNotification({
 				message: "Customer updated successfully",
@@ -702,6 +725,22 @@ const CustomerTable = ({
 							))}
 						</Select>
 					)}
+					<div>
+						<label
+							htmlFor="create-package-start-date"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
+							Package Start Date
+						</label>
+						<input
+							type="date"
+							id="create-package-start-date"
+							name="package_start_date"
+							value={newCustomerData.package_start_date}
+							onChange={handleDateChange}
+							className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border"
+						/>
+					</div>
 				</div>
 
 				<div className="mt-6 flex justify-end gap-3">
@@ -762,6 +801,22 @@ const CustomerTable = ({
 							))}
 						</Select>
 					)}
+					<div>
+						<label
+							htmlFor="edit-package-start-date"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
+							Package Start Date
+						</label>
+						<input
+							type="date"
+							id="edit-package-start-date"
+							name="package_start_date"
+							value={newCustomerData.package_start_date}
+							onChange={handleDateChange}
+							className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border"
+						/>
+					</div>
 				</div>
 
 				<div className="mt-6 flex justify-end gap-3">
@@ -850,11 +905,14 @@ const CustomerTable = ({
 									<td className="px-6 py-4 whitespace-nowrap">
 										<div className="flex items-center">
 											<div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium">
-												{customer.name.charAt(0).toUpperCase()}
+												{customer.username.charAt(0).toUpperCase()}
 											</div>
 											<div className="ml-4">
 												<div className="text-sm font-medium text-gray-900">
-													@{customer.username}
+													Username:{customer.username}
+												</div>
+												<div className="text-sm font-medium text-gray-900">
+													Nama:{customer.name}
 												</div>
 												{customer.phone && (
 													<div className="text-xs text-gray-500">

@@ -806,7 +806,7 @@ const ResellerTable = ({
 													{reseller.name}
 												</div>
 												<div className="text-xs text-gray-500">
-													@{reseller.username}
+													Username: {reseller.username}
 												</div>
 											</div>
 										</div>

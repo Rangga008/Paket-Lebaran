@@ -18,6 +18,7 @@ module.exports = {
 		description,
 		payment_method,
 		payment_amount,
+		payment_months,
 		productIds
 	) => {
 		return await prisma.package.create({
@@ -26,6 +27,7 @@ module.exports = {
 				description,
 				payment_method,
 				payment_amount,
+				payment_months,
 				products: {
 					connect: productIds.map((id) => ({ id })),
 				},
@@ -51,6 +53,7 @@ module.exports = {
 		description,
 		payment_method,
 		payment_amount,
+		payment_months,
 		productIds
 	) => {
 		return await prisma.package.update({
@@ -60,6 +63,7 @@ module.exports = {
 				description,
 				payment_method,
 				payment_amount,
+				payment_months,
 				products: {
 					set: productIds.map((id) => ({ id })),
 				},

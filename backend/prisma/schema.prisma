@@ -29,10 +29,13 @@ model User {
   payments    Payment[]
   package_id  Int?
   package     Package? @relation(fields: [package_id], references: [id])
+  package_start_date DateTime?  // New field to store package start date
   
   // Add these relations for ResellerCustomer
   resellerCustomers ResellerCustomer[] @relation("ResellerRelation")
   customerResellers ResellerCustomer[] @relation("CustomerRelation")
+
+  userPackageSelections UserPackageSelection[]
   
   @@map("users")
 }
@@ -43,9 +46,12 @@ model Package {
   description     String?
   payment_method  PaymentMethod?
   payment_amount  Float
+  payment_months  Int?      // Added to indicate payment period in months
   users           User[]
   products        Product[]  @relation("PackageProducts")
   payments        Payment[]
+
+  userPackageSelections UserPackageSelection[]
   
   @@map("packages")
 }
@@ -68,6 +74,7 @@ model Payment {
   status            PaymentStatus @default(PENDING)
   payment_start_date DateTime?
   payment_months    Int?
+  payment_dates     String   @default("[]") // ini string biasa berisi JSON
   user_id           Int
   user              User      @relation(fields: [user_id], references: [id])
   package_id        Int
@@ -102,4 +109,16 @@ enum PaymentStatus {
   PENDING
   CONFIRMED
   CANCELED
+}
+
+model UserPackageSelection {
+  id            Int      @id @default(autoincrement())
+  user_id       Int
+  package_id    Int
+  selected_date DateTime @default(now())
+  user          User     @relation(fields: [user_id], references: [id])
+  package       Package  @relation(fields: [package_id], references: [id])
+
+  @@map("user_package_selections")
+  @@unique([user_id, package_id])
 }

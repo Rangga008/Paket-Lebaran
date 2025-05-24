@@ -32,6 +32,7 @@ router.post(
 	"/users/customers/:id/reset-password",
 	userController.resetCustomerPassword
 );
+router.delete("/users/customers/:id", userController.deleteCustomer);
 
 // Add route for payment confirmation
 router.post("/users/:id/confirm-payment", userController.confirmPayment);
@@ -39,18 +40,18 @@ router.post("/users/:id/confirm-payment", userController.confirmPayment);
 // Reseller routes
 router.get("/resellers", userController.getAllResellers);
 router.get("/resellers/:id", userController.getResellerById);
-router.post("/resellers", userController.createReseller);
+router.post("/resellers/", userController.createReseller);
 router.put("/resellers/:id", userController.updateReseller);
 
-router.delete("/:id", userController.deleteReseller);
-router.patch(
-	"/resellers/:id/reset-password",
-	userController.resetResellerPassword
-);
+router.delete("/resellers/:id", userController.deleteReseller);
 router.post("/:id/reset-password", userController.resetResellerPassword);
 
 // Customer assignment to reseller
-router.put("/:id/reseller", userController.assignCustomerToReseller);
+router.put("/users/:id/resellers", userController.assignCustomerToReseller);
+router.put("/:id/resellers", userController.assignCustomerToReseller);
+router.delete("/users/:customerId", userController.unassignReseller);
+router.put("/:customerId/unassign", userController.unassignReseller);
+router.put("/users/:customerId/unassign", userController.unassignReseller);
 
 router.put("/users/:id/package", userController.updateCustomerPackage);
 
