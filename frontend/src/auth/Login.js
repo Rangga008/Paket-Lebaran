@@ -64,10 +64,10 @@ function Login() {
 					</div>
 
 					<h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
-						Welcome Back
+						Selamat Datang Kembali
 					</h2>
 					<p className="text-gray-500 text-center mb-8">
-						Sign in to your account
+						Login Pada akun Anda untuk melanjutkan
 					</p>
 
 					{error && (
@@ -144,7 +144,7 @@ function Login() {
 									htmlFor="remember-me"
 									className="ml-2 block text-sm text-gray-700"
 								>
-									Remember me
+									Ingat saya
 								</label>
 							</div>
 							<button
@@ -152,7 +152,7 @@ function Login() {
 								onClick={() => navigate("/forgot-password")}
 								className="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
 							>
-								Forgot password?
+								Lupa Password?
 							</button>
 						</div>
 
@@ -185,10 +185,10 @@ function Login() {
 											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 										></path>
 									</svg>
-									Signing in...
+									Login...
 								</div>
 							) : (
-								"Sign In"
+								"Login"
 							)}
 						</button>
 					</form>
@@ -200,7 +200,7 @@ function Login() {
 							</div>
 							<div className="relative flex justify-center text-sm">
 								<span className="px-2 bg-white text-gray-500">
-									New to Toko Triani?
+									Baru ke Toko Triani?
 								</span>
 							</div>
 						</div>
@@ -222,7 +222,7 @@ function Login() {
 									d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
 								/>
 							</svg>
-							Create an account
+							Buat akun baru
 						</button>
 					</div>
 				</div>

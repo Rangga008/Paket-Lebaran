@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../utils/api";
+import { Search, Filter, X, RefreshCw, Plus } from "lucide-react";
 
 // Icons component
 const Icons = {
@@ -346,6 +347,7 @@ const ResellerTable = ({
 	});
 
 	const [editingReseller, setEditingReseller] = useState(null);
+	const [searchTerm, setSearchTerm] = useState("");
 
 	// Form validation
 	const validateForm = (data, isCreate = false) => {
@@ -550,37 +552,61 @@ const ResellerTable = ({
 		setNotification(null);
 	};
 
+	// Filter and search resellers
+	const filteredResellers = useMemo(() => {
+		if (!searchTerm) return resellers;
+
+		const searchLower = searchTerm.toLowerCase();
+		return resellers.filter(
+			(reseller) =>
+				reseller.name.toLowerCase().includes(searchLower) ||
+				reseller.username.toLowerCase().includes(searchLower) ||
+				reseller.phone.includes(searchTerm)
+		);
+	}, [resellers, searchTerm]);
+
+	// Clear search
+	const clearSearch = () => {
+		setSearchTerm("");
+	};
+
 	// Animation CSS
-	const style = document.createElement("style");
-	style.innerText = `
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    @keyframes slideDown {
-      from { transform: translateY(-10px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    
-    @keyframes modalIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    
-    .animate-fade-in {
-      animation: fadeIn 0.3s ease-in-out;
-    }
-    
-    .animate-slide-down {
-      animation: slideDown 0.3s ease-in-out;
-    }
-    
-    .animate-modal-in {
-      animation: modalIn 0.3s ease-out;
-    }
-  `;
-	document.head.appendChild(style);
+	React.useEffect(() => {
+		const style = document.createElement("style");
+		style.innerText = `
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      
+      @keyframes slideDown {
+        from { transform: translateY(-10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      
+      @keyframes modalIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      
+      .animate-slide-down {
+        animation: slideDown 0.3s ease-in-out;
+      }
+      
+      .animate-modal-in {
+        animation: modalIn 0.3s ease-out;
+      }
+    `;
+		document.head.appendChild(style);
+
+		return () => {
+			document.head.removeChild(style);
+		};
+	}, []);
 
 	return (
 		<div className="bg-white shadow-lg rounded-lg p-6">
@@ -592,28 +618,61 @@ const ResellerTable = ({
 				/>
 			)}
 
-			<div className="flex justify-between items-center mb-6">
-				<h2 className="text-xl font-semibold text-gray-800">
-					Reseller Management
-				</h2>
-				<Button onClick={openCreateModal} className="flex items-center gap-2">
-					<Icons.Plus />
-					<span>Add Reseller</span>
+			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+				<div>
+					<h2 className="text-2xl font-bold text-gray-900 mb-1">
+						Manajemen Reseller
+					</h2>
+					<p className="text-sm text-gray-600">
+						Kelola semua reseller dan data mereka
+					</p>
+				</div>
+				<Button
+					onClick={openCreateModal}
+					className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+				>
+					<Plus size={18} />
+					<span>Tambah Reseller</span>
 				</Button>
+			</div>
+
+			{/* Search and Controls */}
+			<div className="flex flex-col sm:flex-row gap-4 mb-6">
+				{/* Search */}
+				<div className="flex-1 relative">
+					<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+						<Search className="h-5 w-5 text-gray-400" />
+					</div>
+					<input
+						type="text"
+						placeholder="Cari Reseller atau Username..."
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+					/>
+					{searchTerm && (
+						<button
+							onClick={clearSearch}
+							className="absolute inset-y-0 right-0 pr-3 flex items-center"
+						>
+							<X className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+						</button>
+					)}
+				</div>
 			</div>
 
 			{/* Create Reseller Modal */}
 			<Modal
 				isOpen={showCreateModal}
 				onClose={closeModals}
-				title="Create New Reseller"
+				title="Buat Reseller baru"
 			>
 				<div className="space-y-4">
 					<Input
 						label="Name"
 						id="create-name"
 						name="name"
-						placeholder="Reseller name"
+						placeholder="Nama Reseller"
 						value={resellerData.name}
 						onChange={handleInputChange}
 						error={errors.name}
@@ -630,11 +689,11 @@ const ResellerTable = ({
 					/>
 
 					<Input
-						label="Phone"
+						label="Nomor Telepon"
 						id="create-phone"
 						name="phone"
 						type="tel"
-						placeholder="Phone number"
+						placeholder="Nomor Telepon"
 						value={resellerData.phone}
 						onChange={handleInputChange}
 						error={errors.phone}
@@ -645,7 +704,7 @@ const ResellerTable = ({
 						id="create-password"
 						name="password"
 						type="password"
-						placeholder="Set password"
+						placeholder="Masukan password"
 						value={resellerData.password}
 						onChange={handleInputChange}
 						error={errors.password}
@@ -657,7 +716,7 @@ const ResellerTable = ({
 						Cancel
 					</Button>
 					<Button variant="success" onClick={createReseller}>
-						Create Reseller
+						Buat Reseller
 					</Button>
 				</div>
 			</Modal>
@@ -666,7 +725,7 @@ const ResellerTable = ({
 			<Modal isOpen={showEditModal} onClose={closeModals} title="Edit Reseller">
 				<div className="space-y-4">
 					<Input
-						label="Name"
+						label="Nama"
 						id="edit-name"
 						name="name"
 						placeholder="Reseller name"
@@ -686,17 +745,17 @@ const ResellerTable = ({
 					/>
 
 					<Input
-						label="Phone"
+						label="Nomor Telepon"
 						id="edit-phone"
 						name="phone"
-						placeholder="Phone number"
+						placeholder="Nomor Telepon"
 						value={resellerData.phone}
 						onChange={handleInputChange}
 						error={errors.phone}
 					/>
 
 					<Input
-						label="New Password (Leave blank to keep current)"
+						label="Password Baru (opsional)"
 						id="edit-password"
 						name="password"
 						type="password"
@@ -724,10 +783,10 @@ const ResellerTable = ({
 				title="Reset Password"
 			>
 				<Input
-					label="New Password"
+					label="Password Baru"
 					id="reset-password"
 					type="password"
-					placeholder="Enter new password"
+					placeholder="Masukan password baru"
 					value={newPassword}
 					onChange={(e) => setNewPassword(e.target.value)}
 					error={errors.password}
@@ -743,126 +802,155 @@ const ResellerTable = ({
 				</div>
 			</Modal>
 
+			{/* Loading State */}
+			{isLoading && (
+				<div className="flex justify-center items-center py-8">
+					<div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+				</div>
+			)}
+
+			{/* Error State */}
+			{error && !isLoading && (
+				<div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+					<div className="flex">
+						<div className="flex-shrink-0">
+							<Icons.AlertCircle className="h-5 w-5 text-red-500" />
+						</div>
+						<div className="ml-3">
+							<p className="text-sm text-red-700">{error}</p>
+						</div>
+					</div>
+				</div>
+			)}
+
 			{/* Reseller Table */}
-			<div className="mt-4 overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-				<table className="min-w-full divide-y divide-gray-200">
-					<thead className="bg-gray-50">
-						<tr>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Reseller
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Phone
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Customers
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Status
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Actions
-							</th>
-						</tr>
-					</thead>
-					<tbody className="bg-white divide-y divide-gray-200">
-						{resellers.length === 0 ? (
+			<div className="mt-4 overflow-x-auto">
+				<div className="shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+					<table className="min-w-full divide-y divide-gray-200">
+						<thead className="bg-gray-50">
 							<tr>
-								<td
-									colSpan="5"
-									className="px-6 py-4 text-sm text-gray-500 text-center"
+								<th
+									scope="col"
+									className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
 								>
-									No resellers found
-								</td>
+									Reseller
+								</th>
+								<th
+									scope="col"
+									className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+								>
+									Nomor Telepon
+								</th>
+								<th
+									scope="col"
+									className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+								>
+									Customers
+								</th>
+								<th
+									scope="col"
+									className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+								>
+									Status
+								</th>
+								<th
+									scope="col"
+									className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+								>
+									Aksi
+								</th>
 							</tr>
-						) : (
-							resellers.map((reseller) => (
-								<tr
-									key={reseller.id}
-									className="hover:bg-gray-50 transition-colors duration-150"
-								>
-									<td className="px-6 py-4 whitespace-nowrap">
-										<div className="flex items-center">
-											<div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium">
-												{reseller.name.charAt(0).toUpperCase()}
-											</div>
-											<div className="ml-4">
-												<div className="text-sm font-medium text-gray-900">
-													{reseller.name}
-												</div>
-												<div className="text-xs text-gray-500">
-													Username: {reseller.username}
-												</div>
-											</div>
-										</div>
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-										{reseller.phone}
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-										{
-											customers.filter((c) => c.reseller_id === reseller.id)
-												.length
-										}
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap">
-										<Badge variant="success">Active</Badge>
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										<div className="flex space-x-3">
-											<button
-												onClick={() => handleViewCustomers(reseller.id)}
-												className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
-												title="View Customers"
-											>
-												<Icons.Eye />
-											</button>
-
-											<button
-												onClick={() => openEditModal(reseller)}
-												className="text-yellow-600 hover:text-yellow-900 flex items-center gap-1"
-												title="Edit Reseller"
-											>
-												<Icons.Edit />
-											</button>
-
-											<button
-												onClick={() => openResetPasswordModal(reseller.id)}
-												className="text-purple-600 hover:text-purple-900 flex items-center gap-1"
-												title="Reset Password"
-											>
-												<Icons.Key />
-											</button>
-
-											<button
-												onClick={() => confirmDelete(reseller.id)}
-												className="text-red-600 hover:text-red-900 flex items-center gap-1"
-												title="Delete Reseller"
-											>
-												<Icons.Delete />
-											</button>
-										</div>
+						</thead>
+						<tbody className="bg-white divide-y divide-gray-200">
+							{filteredResellers.length === 0 ? (
+								<tr>
+									<td
+										colSpan="5"
+										className="px-6 py-4 text-center text-sm text-gray-500"
+									>
+										{searchTerm
+											? "No matching resellers found"
+											: "No resellers available"}
 									</td>
 								</tr>
-							))
-						)}
-					</tbody>
-				</table>
+							) : (
+								filteredResellers.map((reseller) => (
+									<tr
+										key={reseller.id}
+										className="hover:bg-gray-50 transition-colors duration-150"
+									>
+										<td className="px-6 py-4 whitespace-nowrap">
+											<div className="flex items-center">
+												<div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium">
+													{reseller.name.charAt(0).toUpperCase()}
+												</div>
+												<div className="ml-4">
+													<div className="text-sm font-medium text-gray-900">
+														{reseller.name}
+													</div>
+													<div className="text-xs text-gray-500">
+														Username: {reseller.username}
+													</div>
+												</div>
+											</div>
+										</td>
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+											{reseller.phone}
+										</td>
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+											{
+												customers.filter((c) => c.reseller_id === reseller.id)
+													.length
+											}
+										</td>
+										<td className="px-6 py-4 whitespace-nowrap">
+											<Badge variant="success">Active</Badge>
+										</td>
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+											<div className="flex justify-end space-x-3">
+												<button
+													onClick={() => handleViewCustomers(reseller.id)}
+													className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+													title="View Customers"
+												>
+													<Icons.Eye />
+													<span className="sr-only">View Customers</span>
+												</button>
+
+												<button
+													onClick={() => openEditModal(reseller)}
+													className="text-yellow-600 hover:text-yellow-900 flex items-center gap-1"
+													title="Edit Reseller"
+												>
+													<Icons.Edit />
+													<span className="sr-only">Edit</span>
+												</button>
+
+												<button
+													onClick={() => openResetPasswordModal(reseller.id)}
+													className="text-purple-600 hover:text-purple-900 flex items-center gap-1"
+													title="Reset Password"
+												>
+													<Icons.Key />
+													<span className="sr-only">Reset Password</span>
+												</button>
+
+												<button
+													onClick={() => confirmDelete(reseller.id)}
+													className="text-red-600 hover:text-red-900 flex items-center gap-1"
+													title="Delete Reseller"
+												>
+													<Icons.Delete />
+													<span className="sr-only">Delete</span>
+												</button>
+											</div>
+										</td>
+									</tr>
+								))
+							)}
+						</tbody>
+					</table>
+				</div>
 			</div>
 		</div>
 	);

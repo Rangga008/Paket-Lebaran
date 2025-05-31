@@ -558,13 +558,13 @@ const PaymentConfirmation = ({ customers, packages }) => {
 		<div className="bg-white rounded-xl shadow-lg p-6">
 			<div className="mb-6">
 				<h2 className="text-2xl font-bold text-gray-800 mb-4">
-					Payment Confirmation
+					Konfirmasi Pembayaran Pelanggan
 				</h2>
 
 				<button
 					onClick={() => setShowExportAllModal(true)}
 					disabled={loading || customers.length === 0}
-					className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 ml-2"
+					className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 mb-3"
 				>
 					{loading ? (
 						<>
@@ -630,7 +630,7 @@ const PaymentConfirmation = ({ customers, packages }) => {
 							</svg>
 							<input
 								type="text"
-								placeholder="Search customers or packages..."
+								placeholder="Cari Customer atau Paket..."
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
 								className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -699,7 +699,7 @@ const PaymentConfirmation = ({ customers, packages }) => {
 								onClick={() => handleSort("package")}
 							>
 								<div className="flex items-center gap-1">
-									Package
+									Paket
 									<SortIcon field="package" />
 								</div>
 							</th>
@@ -708,7 +708,7 @@ const PaymentConfirmation = ({ customers, packages }) => {
 								onClick={() => handleSort("lastPayment")}
 							>
 								<div className="flex items-center gap-1">
-									Last Payment Date
+									Terakhir Bayar
 									<SortIcon field="lastPayment" />
 								</div>
 							</th>
@@ -717,12 +717,12 @@ const PaymentConfirmation = ({ customers, packages }) => {
 								onClick={() => handleSort("paidAmount")}
 							>
 								<div className="flex items-center gap-1">
-									Paid Amount
+									Nilai Pembayaran
 									<SortIcon field="paidAmount" />
 								</div>
 							</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-								Action
+								Aksi
 							</th>
 						</tr>
 					</thead>
@@ -771,7 +771,7 @@ const PaymentConfirmation = ({ customers, packages }) => {
 														{pkg.name}
 													</span>
 												) : (
-													<span className="text-gray-400">No package</span>
+													<span className="text-gray-400">Tidak ada Paket</span>
 												)}
 											</div>
 										</td>
@@ -815,7 +815,7 @@ const PaymentConfirmation = ({ customers, packages }) => {
 														d="M5 13l4 4L19 7"
 													/>
 												</svg>
-												Confirm
+												Konfirmasi
 											</button>
 											<button
 												onClick={() => handleExportExcel(customer)} // Pass customer here

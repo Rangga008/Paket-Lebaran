@@ -645,7 +645,8 @@ function CustomerManagement() {
 					</h2>
 					{reseller && (
 						<p className="text-sm text-gray-500">
-							Phone: {reseller.phone || "N/A"} | Username: @{reseller.username}
+							Nomor Telepon: {reseller.phone || "N/A"} | Username: @
+							{reseller.username}
 						</p>
 					)}
 				</div>
@@ -655,7 +656,7 @@ function CustomerManagement() {
 					className="flex items-center gap-2"
 				>
 					<Icons.ArrowLeft />
-					Back to Resellers
+					Kembali
 				</Button>
 				<Button
 					onClick={fetchCustomers}
@@ -687,7 +688,7 @@ function CustomerManagement() {
 			<div className="flex flex-wrap gap-3 mb-6">
 				<Button onClick={openCreateModal} className="flex items-center gap-2">
 					<Icons.Plus />
-					Create New Customer
+					Buat Customer Baru
 				</Button>
 				<Button
 					onClick={openAssignCustomerModal}
@@ -695,7 +696,7 @@ function CustomerManagement() {
 					className="flex items-center gap-2"
 				>
 					<Icons.UserPlus />
-					Assign Existing Customer
+					Tambahkan Customer
 				</Button>
 			</div>
 
@@ -707,13 +708,13 @@ function CustomerManagement() {
 								Customer
 							</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-								No hp
+								Nomor Telepon
 							</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 								Paket
 							</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-								Method Pembayaran
+								Metode Pembayaran
 							</th>
 							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 								Aksi
@@ -724,7 +725,7 @@ function CustomerManagement() {
 						{customers.length === 0 ? (
 							<tr>
 								<td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-									No customers found
+									Customer tidak ditemukan
 								</td>
 							</tr>
 						) : (
@@ -842,12 +843,12 @@ function CustomerManagement() {
 					</div>
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Phone Number
+							Nomor Telepon
 						</label>
 						<input
 							type="text"
 							name="phone"
-							placeholder="Phone Number"
+							placeholder="Nomor Telepon"
 							value={formData.phone}
 							onChange={handleInputChange}
 							className="w-full border border-gray-300 rounded-md p-2"
@@ -856,7 +857,7 @@ function CustomerManagement() {
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">
-								Package
+								Paket
 							</label>
 							<select
 								name="package_id"
@@ -882,7 +883,7 @@ function CustomerManagement() {
 								}}
 								className="w-full border border-gray-300 rounded-md p-2"
 							>
-								<option value="">Select Package</option>
+								<option value="">Pilih Paket</option>
 								{packages.map((pkg) => (
 									<option key={pkg.id} value={pkg.id}>
 										{pkg.name}
@@ -892,7 +893,7 @@ function CustomerManagement() {
 						</div>
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">
-								Payment Method
+								Metode Pembayaran
 							</label>
 							<div className="p-2 border border-gray-300 rounded-md bg-gray-100">
 								{!formData.payment_method && "Pilih paket dulu ya~"}
@@ -904,7 +905,7 @@ function CustomerManagement() {
 					</div>
 					<div className="mt-4">
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Package Start Date
+							Paket Mulai Tanggal
 						</label>
 						<input
 							type="date"
@@ -920,7 +921,7 @@ function CustomerManagement() {
 						Cancel
 					</Button>
 					<Button onClick={createCustomer} disabled={isLoading}>
-						Create Customer
+						Buat Customer
 					</Button>
 				</div>
 			</Modal>
@@ -929,18 +930,17 @@ function CustomerManagement() {
 			<Modal
 				isOpen={showDeleteModal}
 				onClose={closeModals}
-				title="Confirm Deletion"
+				title="Konfirmasi Penghapusan"
 			>
 				<div className="space-y-4">
 					<p className="text-gray-700">
-						Are you sure you want to delete customer{" "}
+						Apa kau yakin akan menghapus akun{" "}
 						<span className="font-semibold">
 							{selectedCustomerForAction?.name || "this customer"}?
 						</span>
 					</p>
 					<p className="text-sm text-red-600">
-						Warning: This action cannot be undone. All customer data will be
-						permanently removed.
+						Warning: Tidak bisa mengembalikan aksi.
 					</p>
 				</div>
 				<div className="mt-6 flex justify-end gap-3">
@@ -956,7 +956,7 @@ function CustomerManagement() {
 						}}
 						disabled={isLoading}
 					>
-						{isLoading ? "Deleting..." : "Delete Permanently"}
+						{isLoading ? "Hapus..." : "Hapus Customer"}
 					</Button>
 				</div>
 			</Modal>
@@ -969,14 +969,14 @@ function CustomerManagement() {
 			>
 				<div className="space-y-4">
 					<p className="text-gray-700">
-						Are you sure you want to unassign customer{" "}
+						Apa kamu yakin akan melepaskan customer{" "}
 						<span className="font-semibold">
 							{selectedCustomerForAction?.name || "this customer"}?
 						</span>
 					</p>
 					<p className="text-sm text-yellow-600">
-						Note: The customer will be removed from this reseller but their
-						account will remain active.
+						Note: Customer ini akan menjadi Mandiri dan tidak lagi terhubung
+						dengan reseller ini.
 					</p>
 				</div>
 				<div className="mt-6 flex justify-end gap-3">
@@ -992,7 +992,7 @@ function CustomerManagement() {
 						}}
 						disabled={isLoading}
 					>
-						{isLoading ? "Processing..." : "Confirm Unassign"}
+						{isLoading ? "Processing..." : "Konfirmasi Lepas"}
 					</Button>
 				</div>
 			</Modal>
@@ -1016,7 +1016,7 @@ function CustomerManagement() {
 					</div>
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Name
+							Nama
 						</label>
 						<input
 							type="text"
@@ -1029,12 +1029,12 @@ function CustomerManagement() {
 					</div>
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Phone Number
+							Nomor Telepon
 						</label>
 						<input
 							type="text"
 							name="phone"
-							placeholder="Phone Number"
+							placeholder="Nomor Telepon"
 							value={formData.phone}
 							onChange={handleInputChange}
 							className="w-full border border-gray-300 rounded-md p-2"
@@ -1043,7 +1043,7 @@ function CustomerManagement() {
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">
-								Package
+								Paket
 							</label>
 							<select
 								name="package_id"
@@ -1062,7 +1062,7 @@ function CustomerManagement() {
 								}}
 								className="w-full border border-gray-300 rounded-md p-2"
 							>
-								<option value="">Select Package</option>
+								<option value="">Pilih Paket</option>
 								{packages.map((pkg) => (
 									<option key={pkg.id} value={pkg.id}>
 										{pkg.name}
@@ -1072,7 +1072,7 @@ function CustomerManagement() {
 						</div>
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">
-								Payment Method
+								Metode Pembayaran
 							</label>
 							<div className="p-2 border border-gray-300 rounded-md bg-gray-100">
 								{formData.payment_method === "DAILY" && "Harian"}
@@ -1084,7 +1084,7 @@ function CustomerManagement() {
 					</div>
 					<div className="mt-4">
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Package Start Date
+							Paket Mulai Tanggal
 						</label>
 						<input
 							type="date"
@@ -1118,11 +1118,11 @@ function CustomerManagement() {
 				<div className="space-y-4">
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							New Password
+							Password Baru
 						</label>
 						<input
 							type="password"
-							placeholder="New Password"
+							placeholder="Masukan password baru"
 							value={newPassword}
 							onChange={(e) => setNewPassword(e.target.value)}
 							className="w-full border border-gray-300 rounded-md p-2"
@@ -1143,19 +1143,19 @@ function CustomerManagement() {
 			<Modal
 				isOpen={showAssignCustomerModal}
 				onClose={closeModals}
-				title="Assign Existing Customer"
+				title="Tambahkan Customer"
 			>
 				<div className="space-y-4">
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Select Customer
+							Pilih Customer
 						</label>
 						<select
 							value={selectedCustomerToAssign || ""}
 							onChange={(e) => setSelectedCustomerToAssign(e.target.value)}
 							className="w-full border border-gray-300 rounded-md p-2"
 						>
-							<option value="">Select a customer</option>
+							<option value="">Pilih Customer</option>
 							{getUnassignedCustomers().map((customer) => (
 								<option key={customer.id} value={customer.id}>
 									{customer.name} (@{customer.username})
@@ -1193,7 +1193,7 @@ function CustomerManagement() {
 					</div>
 					<div className="mt-4">
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Package Start Date
+							Paket Mulai Tanggal
 						</label>
 						<input
 							type="date"

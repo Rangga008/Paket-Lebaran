@@ -232,15 +232,15 @@ const PackageForm = ({
 								onChange={handleOtherPackageChange}
 								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							>
-								<option value="daily">Daily</option>
-								<option value="weekly">Weekly</option>
-								<option value="monthly">Monthly</option>
+								<option value="daily">Harian</option>
+								<option value="weekly">Mingguan</option>
+								<option value="monthly">Bulanan</option>
 							</select>
 						</div>
 
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">
-								Pembayaran Satu Kali <span className="text-red-500">*</span>
+								Pembayaran Per Bayar <span className="text-red-500">*</span>
 							</label>
 							<div className="relative">
 								<span className="absolute left-3 top-2 text-gray-500">Rp</span>
@@ -294,7 +294,7 @@ const PackageForm = ({
 					<div className="mt-6">
 						<div className="flex items-center justify-between mb-4">
 							<h3 className="text-lg font-semibold">
-								Pilih Product <span className="text-red-500">*</span>
+								Pilih Produk <span className="text-red-500">*</span>
 							</h3>
 							<div className="flex items-center space-x-2 text-sm text-gray-600">
 								<span>{filteredProducts.length} products found</span>

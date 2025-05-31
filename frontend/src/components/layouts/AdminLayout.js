@@ -9,6 +9,15 @@ const AdminLayout = ({ activeTab, setActiveTab, children }) => {
 		"confirmations",
 	];
 
+	// Mapping label Bahasa Indonesia
+	const tabLabels = {
+		products: "Produk",
+		packages: "Paket",
+		customers: "Pelanggan",
+		resellers: "Reseller",
+		confirmations: "Konfirmasi",
+	};
+
 	return (
 		<div className="w-full max-h-screen bg-gray-100">
 			{/* Main Content Area */}
@@ -27,7 +36,7 @@ const AdminLayout = ({ activeTab, setActiveTab, children }) => {
 								}`}
 								onClick={() => setActiveTab(tab)}
 							>
-								{tab.charAt(0).toUpperCase() + tab.slice(1)}
+								{tabLabels[tab] || tab}
 							</button>
 						))}
 					</div>

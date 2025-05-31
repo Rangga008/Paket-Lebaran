@@ -96,7 +96,7 @@ const ProductList = ({
 				<div className="flex items-center space-x-3">
 					{!isLoading && (
 						<span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium shadow-sm">
-							{products.length} items
+							{products.length} item
 						</span>
 					)}
 					<button
@@ -301,7 +301,7 @@ const ProductList = ({
 													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
 												/>
 											</svg>
-											Delete
+											Hapus
 										</button>
 									</div>
 								</div>

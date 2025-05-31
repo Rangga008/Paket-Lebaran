@@ -1,8 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import api from "../../../utils/api";
 
-// Icons component
+// Icons component with all required icons including Search
 const Icons = {
+	Search: () => (
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<circle cx="11" cy="11" r="8"></circle>
+			<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+		</svg>
+	),
 	Plus: () => (
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -162,20 +178,7 @@ const Notification = ({ message, type, onClose }) => {
 				className="ml-auto -mx-1.5 -my-1.5 rounded-lg p-1.5 inline-flex items-center justify-center h-8 w-8 hover:bg-gray-200"
 			>
 				<span className="sr-only">Close</span>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="16"
-					height="16"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="2"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-				>
-					<line x1="18" y1="6" x2="6" y2="18"></line>
-					<line x1="6" y1="6" x2="18" y2="18"></line>
-				</svg>
+				<Icons.X />
 			</button>
 		</div>
 	);
@@ -343,10 +346,12 @@ const Badge = ({ children, variant = "success" }) => {
 
 // Customer Table Component
 const CustomerTable = ({
-	customers,
-	packages,
+	customers = [],
+	packages = [],
 	onSelectCustomer,
 	onRefresh,
+	isLoading = false,
+	error = null,
 }) => {
 	const [editingCustomer, setEditingCustomer] = useState(null);
 	const [newCustomerData, setNewCustomerData] = useState({
@@ -356,7 +361,7 @@ const CustomerTable = ({
 		phone: "",
 		role: "customer",
 		package_id: null,
-		package_start_date: "", // new field for package start date
+		package_start_date: "",
 	});
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [showEditModal, setShowEditModal] = useState(false);
@@ -365,18 +370,35 @@ const CustomerTable = ({
 	const [newPassword, setNewPassword] = useState("");
 	const [notification, setNotification] = useState(null);
 	const [errors, setErrors] = useState({});
+	const [searchTerm, setSearchTerm] = useState("");
 
 	const currentUser = JSON.parse(localStorage.getItem("user"));
 
-	// Form validation
+	const filteredCustomers = useMemo(() => {
+		const baseFiltered = customers.filter(
+			(customer) => !["ADMIN", "RESELLER"].includes(customer.role)
+		);
+
+		if (!searchTerm) return baseFiltered;
+
+		const searchLower = searchTerm.toLowerCase();
+		return baseFiltered.filter(
+			(customer) =>
+				customer.name?.toLowerCase().includes(searchLower) ||
+				customer.username?.toLowerCase().includes(searchLower) ||
+				customer.phone?.includes(searchTerm)
+		);
+	}, [customers, searchTerm]);
+
 	const validateForm = (data, isCreate = false) => {
 		const errors = {};
 
-		if (!data.name.trim()) errors.name = "Name is required";
+		if (!data.name?.trim()) errors.name = "Name is required";
+		if (!data.phone?.trim()) errors.phone = "Phone is required";
 
 		if (isCreate) {
-			if (!data.username.trim()) errors.username = "Username is required";
-			if (!data.password.trim()) errors.password = "Password is required";
+			if (!data.username?.trim()) errors.username = "Username is required";
+			if (!data.password?.trim()) errors.password = "Password is required";
 			else if (data.password.length < 6)
 				errors.password = "Password must be at least 6 characters";
 		}
@@ -387,14 +409,16 @@ const CustomerTable = ({
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
 		setNewCustomerData((prev) => ({ ...prev, [name]: value }));
+
+		if (errors[name]) {
+			setErrors((prev) => ({ ...prev, [name]: null }));
+		}
 	};
 
-	// New handler for date input change
 	const handleDateChange = (e) => {
 		const { name, value } = e.target;
 		setNewCustomerData((prev) => ({ ...prev, [name]: value }));
 
-		// Clear specific error when field is changed
 		if (errors[name]) {
 			setErrors((prev) => ({ ...prev, [name]: null }));
 		}
@@ -408,6 +432,7 @@ const CustomerTable = ({
 			phone: "",
 			role: "customer",
 			package_id: null,
+			package_start_date: "",
 		});
 		setErrors({});
 		setShowCreateModal(true);
@@ -456,7 +481,6 @@ const CustomerTable = ({
 				return;
 			}
 
-			// Check if username already exists
 			const usernameExists = customers.some(
 				(customer) => customer.username === newCustomerData.username
 			);
@@ -575,9 +599,7 @@ const CustomerTable = ({
 		try {
 			await api.post(
 				`/users/customers/${resetPasswordCustomerId}/reset-password`,
-				{
-					newPassword,
-				}
+				{ newPassword }
 			);
 
 			setNotification({
@@ -585,7 +607,6 @@ const CustomerTable = ({
 				type: "success",
 			});
 			closeModals();
-			console.log("ID yang dikirim:", resetPasswordCustomerId);
 		} catch (error) {
 			setNotification({
 				message:
@@ -601,45 +622,13 @@ const CustomerTable = ({
 		return pkg ? pkg.name : "No package";
 	};
 
-	const filteredCustomers = customers.filter(
-		(customer) => !["ADMIN", "RESELLER"].includes(customer.role)
-	);
-
 	const closeNotification = () => {
 		setNotification(null);
 	};
 
-	// Animation CSS
-	const style = document.createElement("style");
-	style.innerText = `
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    @keyframes slideDown {
-      from { transform: translateY(-10px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    
-    @keyframes modalIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    
-    .animate-fade-in {
-      animation: fadeIn 0.3s ease-in-out;
-    }
-    
-    .animate-slide-down {
-      animation: slideDown 0.3s ease-in-out;
-    }
-    
-    .animate-modal-in {
-      animation: modalIn 0.3s ease-out;
-    }
-  `;
-	document.head.appendChild(style);
+	const clearSearch = () => {
+		setSearchTerm("");
+	};
 
 	return (
 		<div className="bg-white shadow-lg rounded-lg p-6">
@@ -651,28 +640,77 @@ const CustomerTable = ({
 				/>
 			)}
 
-			<div className="flex justify-between items-center mb-6">
-				<h2 className="text-xl font-semibold text-gray-800">
-					Customer Management
-				</h2>
-				<Button onClick={openCreateModal} className="flex items-center gap-2">
+			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+				<div>
+					<h2 className="text-2xl font-bold text-gray-900 mb-1">
+						Manajemen Customer
+					</h2>
+					<p className="text-sm text-gray-600">
+						Kelola semua customer dan data mereka
+					</p>
+				</div>
+				<Button
+					onClick={openCreateModal}
+					className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+				>
 					<Icons.Plus />
-					<span>Add Customer</span>
+					<span>Tambah Customer</span>
 				</Button>
 			</div>
 
-			{/* Create Customer Modal */}
+			<div className="flex flex-col sm:flex-row gap-4 mb-6">
+				<div className="flex-1 relative">
+					<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+						<Icons.Search className="h-5 w-5 text-gray-400" />
+					</div>
+					<input
+						type="text"
+						placeholder="Cari Customer..."
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+					/>
+					{searchTerm && (
+						<button
+							onClick={clearSearch}
+							className="absolute inset-y-0 right-0 pr-3 flex items-center"
+						>
+							<Icons.X className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+						</button>
+					)}
+				</div>
+			</div>
+
+			{isLoading && (
+				<div className="flex justify-center items-center py-8">
+					<div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+				</div>
+			)}
+
+			{error && !isLoading && (
+				<div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+					<div className="flex">
+						<div className="flex-shrink-0">
+							<Icons.AlertCircle className="h-5 w-5 text-red-500" />
+						</div>
+						<div className="ml-3">
+							<p className="text-sm text-red-700">{error}</p>
+						</div>
+					</div>
+				</div>
+			)}
+
 			<Modal
 				isOpen={showCreateModal}
 				onClose={closeModals}
-				title="Create New Customer"
+				title="Buat Customer Baru"
 			>
 				<div className="space-y-4">
 					<Input
-						label="Name"
+						label="Nama"
 						id="create-name"
 						name="name"
-						placeholder="Customer name"
+						placeholder="Customer nama"
 						value={newCustomerData.name}
 						onChange={handleInputChange}
 						error={errors.name}
@@ -689,13 +727,14 @@ const CustomerTable = ({
 					/>
 
 					<Input
-						label="Phone"
+						label="Nomor HP"
 						id="create-phone"
 						name="phone"
 						type="tel"
-						placeholder="Phone number"
+						placeholder="Nomor telepon"
 						value={newCustomerData.phone}
 						onChange={handleInputChange}
+						error={errors.phone}
 					/>
 
 					<Input
@@ -703,7 +742,7 @@ const CustomerTable = ({
 						id="create-password"
 						name="password"
 						type="password"
-						placeholder="Set password"
+						placeholder="password"
 						value={newCustomerData.password}
 						onChange={handleInputChange}
 						error={errors.password}
@@ -711,13 +750,13 @@ const CustomerTable = ({
 
 					{packages.length > 0 && (
 						<Select
-							label="Package"
+							label="Paket"
 							id="create-package"
 							name="package_id"
 							value={newCustomerData.package_id || ""}
 							onChange={handleInputChange}
 						>
-							<option value="">Select a package</option>
+							<option value="">Pilih Paket</option>
 							{packages.map((pkg) => (
 								<option key={pkg.id} value={pkg.id}>
 									{pkg.name}
@@ -725,12 +764,13 @@ const CustomerTable = ({
 							))}
 						</Select>
 					)}
+
 					<div>
 						<label
 							htmlFor="create-package-start-date"
 							className="block text-sm font-medium text-gray-700 mb-1"
 						>
-							Package Start Date
+							Tanggal Mulai Paket
 						</label>
 						<input
 							type="date"
@@ -748,16 +788,15 @@ const CustomerTable = ({
 						Cancel
 					</Button>
 					<Button variant="success" onClick={createCustomer}>
-						Create Customer
+						Buat Customer
 					</Button>
 				</div>
 			</Modal>
 
-			{/* Edit Customer Modal */}
 			<Modal isOpen={showEditModal} onClose={closeModals} title="Edit Customer">
 				<div className="space-y-4">
 					<Input
-						label="Name"
+						label="Nama"
 						id="edit-name"
 						name="name"
 						placeholder="Customer name"
@@ -777,23 +816,24 @@ const CustomerTable = ({
 					/>
 
 					<Input
-						label="Phone"
+						label="Nomor HP"
 						id="edit-phone"
 						name="phone"
 						placeholder="Phone number"
 						value={newCustomerData.phone}
 						onChange={handleInputChange}
+						error={errors.phone}
 					/>
 
 					{packages.length > 0 && (
 						<Select
-							label="Package"
+							label="Paket"
 							id="edit-package"
 							name="package_id"
 							value={newCustomerData.package_id || ""}
 							onChange={handleInputChange}
 						>
-							<option value="">Select a package</option>
+							<option value="">Pilih paket</option>
 							{packages.map((pkg) => (
 								<option key={pkg.id} value={pkg.id}>
 									{pkg.name}
@@ -801,12 +841,13 @@ const CustomerTable = ({
 							))}
 						</Select>
 					)}
+
 					<div>
 						<label
 							htmlFor="edit-package-start-date"
 							className="block text-sm font-medium text-gray-700 mb-1"
 						>
-							Package Start Date
+							Paket Mulai Tanggal
 						</label>
 						<input
 							type="date"
@@ -829,17 +870,16 @@ const CustomerTable = ({
 				</div>
 			</Modal>
 
-			{/* Reset Password Modal */}
 			<Modal
 				isOpen={showResetPasswordModal}
 				onClose={closeModals}
 				title="Reset Password"
 			>
 				<Input
-					label="New Password"
+					label="Password Baru"
 					id="reset-password"
 					type="password"
-					placeholder="Enter new password"
+					placeholder="Masukan password baru"
 					value={newPassword}
 					onChange={(e) => setNewPassword(e.target.value)}
 					error={errors.password}
@@ -855,131 +895,140 @@ const CustomerTable = ({
 				</div>
 			</Modal>
 
-			{/* Customer Table */}
-			<div className="mt-4 overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-				<table className="min-w-full divide-y divide-gray-200">
-					<thead className="bg-gray-50">
-						<tr>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Customer Nama
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Paket
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Status
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Aksi
-							</th>
-						</tr>
-					</thead>
-					<tbody className="bg-white divide-y divide-gray-200">
-						{filteredCustomers.length === 0 ? (
-							<tr>
-								<td
-									colSpan="4"
-									className="px-6 py-4 text-sm text-gray-500 text-center"
-								>
-									No customers found
-								</td>
-							</tr>
-						) : (
-							filteredCustomers.map((customer) => (
-								<tr
-									key={customer.id}
-									className="hover:bg-gray-50 transition-colors duration-150"
-								>
-									<td className="px-6 py-4 whitespace-nowrap">
-										<div className="flex items-center">
-											<div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium">
-												{customer.username.charAt(0).toUpperCase()}
-											</div>
-											<div className="ml-4">
-												<div className="text-sm font-medium text-gray-900">
-													Username:{customer.username}
-												</div>
-												<div className="text-sm font-medium text-gray-900">
-													Nama:{customer.name}
-												</div>
-												{customer.phone && (
-													<div className="text-xs text-gray-500">
-														No hp:{customer.phone}
-													</div>
-												)}
-											</div>
-										</div>
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap">
-										<div className="text-sm text-gray-900">
-											{customerPackageName(customer)}
-										</div>
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap">
-										<Badge variant="success">Active</Badge>
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm">
-										<div className="flex space-x-3">
-											<button
-												onClick={() => onSelectCustomer(customer)}
-												className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
-												title="View Payments"
-											>
-												<Icons.Eye />
-											</button>
-
-											{customer.id === currentUser?.id ? (
-												<span
-													className="text-gray-400 cursor-not-allowed flex items-center gap-1"
-													title="You cannot edit your own account here"
-												>
-													<Icons.Edit />
-												</span>
-											) : (
-												<button
-													onClick={() => openEditModal(customer)}
-													className="text-yellow-600 hover:text-yellow-900 flex items-center gap-1"
-													title="Edit Customer"
-												>
-													<Icons.Edit />
-												</button>
-											)}
-
-											<button
-												onClick={() => openResetPasswordModal(customer.id)}
-												className="text-purple-600 hover:text-purple-900 flex items-center gap-1"
-												title="Reset Password"
-											>
-												<Icons.Key />
-											</button>
-
-											<button
-												onClick={() => confirmDelete(customer.id)}
-												className="text-red-600 hover:text-red-900 flex items-center gap-1"
-												title="Delete Customer"
-											>
-												<Icons.Delete />
-											</button>
-										</div>
-									</td>
+			{!isLoading && !error && (
+				<div className="mt-4 overflow-x-auto">
+					<div className="shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+						<table className="min-w-full divide-y divide-gray-200">
+							<thead className="bg-gray-50">
+								<tr>
+									<th
+										scope="col"
+										className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+									>
+										Customer
+									</th>
+									<th
+										scope="col"
+										className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+									>
+										Paket
+									</th>
+									<th
+										scope="col"
+										className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+									>
+										Status
+									</th>
+									<th
+										scope="col"
+										className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+									>
+										Aksi
+									</th>
 								</tr>
-							))
-						)}
-					</tbody>
-				</table>
-			</div>
+							</thead>
+							<tbody className="bg-white divide-y divide-gray-200">
+								{filteredCustomers.length === 0 ? (
+									<tr>
+										<td
+											colSpan="4"
+											className="px-6 py-4 text-center text-sm text-gray-500"
+										>
+											{searchTerm
+												? "No matching customers found"
+												: "No customers available"}
+										</td>
+									</tr>
+								) : (
+									filteredCustomers.map((customer) => (
+										<tr
+											key={customer.id}
+											className="hover:bg-gray-50 transition-colors duration-150"
+										>
+											<td className="px-6 py-4 whitespace-nowrap">
+												<div className="flex items-center">
+													<div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium">
+														{customer.username?.charAt(0).toUpperCase()}
+													</div>
+													<div className="ml-4">
+														<div className="text-sm font-medium text-gray-900">
+															{customer.name}
+														</div>
+														<div className="text-sm text-gray-500">
+															@{customer.username}
+														</div>
+														{customer.phone && (
+															<div className="text-xs text-gray-500">
+																{customer.phone}
+															</div>
+														)}
+													</div>
+												</div>
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap">
+												<div className="text-sm text-gray-900">
+													{customerPackageName(customer)}
+												</div>
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap">
+												<Badge variant="success">Active</Badge>
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+												<div className="flex justify-end space-x-3">
+													<button
+														onClick={() => onSelectCustomer(customer)}
+														className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+														title="View Payments"
+													>
+														<Icons.Eye />
+														<span className="sr-only">View</span>
+													</button>
+
+													{customer.id === currentUser?.id ? (
+														<span
+															className="text-gray-400 cursor-not-allowed flex items-center gap-1"
+															title="You cannot edit your own account here"
+														>
+															<Icons.Edit />
+														</span>
+													) : (
+														<button
+															onClick={() => openEditModal(customer)}
+															className="text-yellow-600 hover:text-yellow-900 flex items-center gap-1"
+															title="Edit Customer"
+														>
+															<Icons.Edit />
+															<span className="sr-only">Edit</span>
+														</button>
+													)}
+
+													<button
+														onClick={() => openResetPasswordModal(customer.id)}
+														className="text-purple-600 hover:text-purple-900 flex items-center gap-1"
+														title="Reset Password"
+													>
+														<Icons.Key />
+														<span className="sr-only">Reset Password</span>
+													</button>
+
+													<button
+														onClick={() => confirmDelete(customer.id)}
+														className="text-red-600 hover:text-red-900 flex items-center gap-1"
+														title="Delete Customer"
+													>
+														<Icons.Delete />
+														<span className="sr-only">Delete</span>
+													</button>
+												</div>
+											</td>
+										</tr>
+									))
+								)}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };

@@ -53,6 +53,19 @@ function CustomerPage() {
 }
 
 function App() {
+	React.useEffect(() => {
+		document.title = "Paket-Lebaran";
+		const link = document.querySelector("link[rel~='icon']");
+		if (!link) {
+			const newLink = document.createElement("link");
+			newLink.rel = "icon";
+			newLink.href = "/favicon.ico"; // You can replace with your navicon path
+			document.getElementsByTagName("head")[0].appendChild(newLink);
+		} else {
+			link.href = "/favicon.ico";
+		}
+	}, []);
+
 	const [user, setUser] = useState(() => {
 		try {
 			const storedUser = localStorage.getItem("user");

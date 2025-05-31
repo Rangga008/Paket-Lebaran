@@ -155,7 +155,7 @@ function Register() {
 					</button>
 				</form>
 				<p className="mt-6 text-center text-gray-600">
-					Already have an account?{" "}
+					Sudah Punya Akun?{" "}
 					<button
 						onClick={() => navigate("/login")}
 						className="text-blue-600 font-semibold hover:underline"

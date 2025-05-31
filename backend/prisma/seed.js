@@ -1,23 +1,29 @@
-import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
+const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcrypt");
 
 const prisma = new PrismaClient();
 
-const passwordUser = "admin"; // bisa diganti sesuai kebutuhan
-const hashedPassword = await bcrypt.hash(passwordUser, 10);
-
 async function main() {
-	// Contoh insert beberapa users
-	await prisma.user.create({
-		data: {
-			username: "admin",
-			name: "Administrator",
-			password: hashedPassword, // biasanya hash di dunia nyata
-			role: "ADMIN",
-		},
+	const passwordUser = "admin"; // bisa diganti sesuai kebutuhan
+	const hashedPassword = await bcrypt.hash(passwordUser, 10);
+
+	// Check if admin user exists
+	const existingAdmin = await prisma.user.findUnique({
+		where: { username: "admin" },
 	});
 
-	// Kamu bisa tambah data lain sesuai kebutuhan
+	if (!existingAdmin) {
+		await prisma.user.create({
+			data: {
+				username: "admin",
+				name: "Administrator",
+				password: hashedPassword,
+				role: "ADMIN",
+			},
+		});
+	}
+
+	// Tambah data lainnya di sini
 }
 
 main()

@@ -241,11 +241,12 @@ const PackageList = ({
 				<div className="grid-flow-row md:flex-row md:items-center md:justify-between gap-2">
 					<div>
 						<h2 className="text-xl font-semibold text-gray-800">
-							Package Management
+							Manajemen Paket
 						</h2>
 						<p className="text-sm text-gray-500 mt-1">
-							Manage your subscription packages and pricing
+							Manage Paket Dan Harga Paket
 						</p>
+						<br></br>
 					</div>
 
 					<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -268,7 +269,7 @@ const PackageList = ({
 							</div>
 							<input
 								type="text"
-								placeholder="Search packages..."
+								placeholder="Cari Paket..."
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
 								className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -284,7 +285,7 @@ const PackageList = ({
 							>
 								{[5, 10, 25, 50].map((num) => (
 									<option key={num} value={num}>
-										Show {num}
+										Perlihatkan {num}
 									</option>
 								))}
 							</select>
@@ -439,14 +440,14 @@ const PackageList = ({
 							/>
 						</svg>
 						<h3 className="text-lg font-medium text-gray-900 mb-2">
-							Error loading packages
+							Error loading Paket
 						</h3>
 						<p className="text-sm text-gray-500 mb-4">{error}</p>
 						<button
 							onClick={onRefresh}
 							className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
 						>
-							Try Again
+							Coba Lagi
 						</button>
 					</div>
 				) : packages.length === 0 ? (
@@ -465,11 +466,9 @@ const PackageList = ({
 							/>
 						</svg>
 						<h3 className="text-lg font-medium text-gray-900 mb-2">
-							No packages found
+							Paket Tidak Ditemukan
 						</h3>
-						<p className="text-sm text-gray-500 mb-4">
-							Create your first package to get started
-						</p>
+						<p className="text-sm text-gray-500 mb-4">Buat Paket Pertama</p>
 						<button
 							onClick={onRefresh}
 							className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -508,9 +507,15 @@ const PackageList = ({
 															: "bg-gray-100 text-gray-800"
 													}`}
 												>
-													{pkg.payment_method?.toLowerCase() || "unknown"}
+													{{
+														daily: "Harian",
+														weekly: "Mingguan",
+														monthly: "Bulanan",
+													}[pkg.payment_method?.toLowerCase()] ||
+														"Tidak diketahui"}
 												</span>
 											</h3>
+
 											{pkg.description && (
 												<p className="text-sm text-gray-500 mt-1">
 													{pkg.description}
@@ -554,7 +559,7 @@ const PackageList = ({
 														d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
 													/>
 												</svg>
-												Delete
+												Hapus
 											</button>
 										</div>
 									</div>
@@ -565,12 +570,18 @@ const PackageList = ({
 											{/* Payment Info */}
 											<div className="bg-blue-50 p-3 rounded-lg">
 												<h4 className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-1">
-													Payment
+													Pembayaran
 												</h4>
 												<p className="text-lg font-semibold text-gray-900">
 													Rp{(pkg.payment_amount || 0).toLocaleString()}
 													<span className="text-sm font-normal text-gray-500 ml-1">
-														/ {pkg.payment_method?.toLowerCase()}
+														/{" "}
+														{{
+															daily: "Harian",
+															weekly: "Mingguan",
+															monthly: "Bulanan",
+														}[pkg.payment_method?.toLowerCase()] ||
+															"Tidak diketahui"}
 													</span>
 												</p>
 											</div>
@@ -591,7 +602,7 @@ const PackageList = ({
 											{/* Total Value */}
 											<div className="bg-green-50 p-3 rounded-lg">
 												<h4 className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-1">
-													Total Value
+													Total Harga Paket
 												</h4>
 												<p className="text-lg font-semibold text-gray-900">
 													Rp{totalAmount.toLocaleString()}
@@ -603,7 +614,7 @@ const PackageList = ({
 										{pkg.products?.length > 0 ? (
 											<div className="mt-4">
 												<h4 className="text-sm font-medium text-gray-900 mb-2">
-													Included Products
+													Produk dalam Paket
 												</h4>
 												<div className="overflow-hidden border border-gray-200 rounded-lg">
 													<table className="min-w-full divide-y divide-gray-200">
@@ -613,13 +624,13 @@ const PackageList = ({
 																	scope="col"
 																	className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
 																>
-																	Product
+																	Produk
 																</th>
 																<th
 																	scope="col"
 																	className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
 																>
-																	Price
+																	Harga
 																</th>
 															</tr>
 														</thead>
@@ -665,7 +676,7 @@ const PackageList = ({
 										) : (
 											<div className="mt-4 text-center py-4 bg-gray-50 rounded-lg">
 												<p className="text-sm text-gray-500">
-													No products included in this package
+													Tidak ada produk dalam paket ini.
 												</p>
 											</div>
 										)}
@@ -697,7 +708,7 @@ const PackageList = ({
 								disabled={currentPage === 1}
 								className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
 							>
-								<span className="sr-only">Previous</span>
+								<span className="sr-only">Sebelumnya</span>
 								<svg
 									className="h-5 w-5"
 									fill="currentColor"
@@ -776,7 +787,7 @@ const PackageList = ({
 				<form onSubmit={handleProductFormSubmit} className="space-y-4 ">
 					<div className="overflow-y-auto">
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Product Name
+							Nama Produk
 						</label>
 						<input
 							type="text"
@@ -791,7 +802,7 @@ const PackageList = ({
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Price
+							Harga
 						</label>
 						<div className="relative">
 							<span className="absolute left-3 top-2">Rp</span>
@@ -811,7 +822,7 @@ const PackageList = ({
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Description
+							Deskripsi
 						</label>
 						<textarea
 							name="description"
@@ -849,7 +860,7 @@ const PackageList = ({
 									d="M5 13l4 4L19 7"
 								/>
 							</svg>
-							<span>Save Product</span>
+							<span>Save Produk</span>
 						</button>
 					</div>
 				</form>
@@ -925,7 +936,7 @@ const PackageList = ({
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Harga
+							Harga Per Pembayaran
 						</label>
 						<div className="relative">
 							<span className="absolute left-3 top-2">Rp</span>
@@ -947,7 +958,7 @@ const PackageList = ({
 					<div className="mt-4">
 						<div className="flex justify-between items-center mb-2">
 							<h3 className="text-sm font-medium text-gray-700">
-								Products in Package ({formData.productIds.length})
+								Produk dalam paket ({formData.productIds.length})
 							</h3>
 							<button
 								type="button"
@@ -967,7 +978,7 @@ const PackageList = ({
 										d="M12 6v6m0 0v6m0-6h6m-6 0H6"
 									/>
 								</svg>
-								Add Product
+								Tambah Produk
 							</button>
 						</div>
 
@@ -1009,26 +1020,6 @@ const PackageList = ({
 													</div>
 												</div>
 												<div className="flex space-x-2 flex-shrink-0">
-													<button
-														type="button"
-														onClick={() => openProductEditModal(product)}
-														className="text-blue-500 hover:text-blue-700"
-														title="Edit product"
-													>
-														<svg
-															className="h-4 w-4"
-															fill="none"
-															viewBox="0 0 24 24"
-															stroke="currentColor"
-														>
-															<path
-																strokeLinecap="round"
-																strokeLinejoin="round"
-																strokeWidth={2}
-																d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-															/>
-														</svg>
-													</button>
 													<button
 														type="button"
 														onClick={() => handleRemoveProduct(productId)}
